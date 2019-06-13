@@ -45,6 +45,7 @@ prepare_rootfs() {
         buster \
         debootstrap/ \
         http://localhost:3142/ftp.ca.debian.org/debian &>/dev/null
+    sudo chroot debootstrap/ apt clean
     sudo rsync -au debootstrap/ ${tempdir}/rootfs/
     echo "done."
    
