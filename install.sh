@@ -85,8 +85,8 @@ while [[ -z ${target_interface} ]]; do
     echo
 done
 
-echo "3b) Please enter the IP address, in CIDR format [X.X.X.X/YY], of the primary network interface."
-echo "Leave blank for DHCP configuration of the interface on boot."
+echo "3b) Please enter the IP address, in CIDR format [X.X.X.X/YY], of the primary"
+echo "network interface. Leave blank for DHCP configuration of the interface on boot."
 echo
 echo -n "> "
 read target_ipaddr
@@ -140,7 +140,7 @@ if [[ -z ${target_keys_url} ]]; then
 fi
 echo
 
-titlestring_text="| Proceeding with installation of host '${target_hostname}' to disk '${target_disk}'. |"
+titlestring_text="| Proceeding with installation of host '${target_hostname}'. |"
 titlestring_len="$( wc -c <<<"${titlestring_text}" )"
 for i in $( seq 2 ${titlestring_len} ); do echo -n "-"; done; echo
 echo "${titlestring_text}"
@@ -172,11 +172,11 @@ case ${target_netformat} in
 esac
 echo "done."
 
-echo -n "Zeroing block device... "
+echo -n "Zeroing block device '${target_disk}'... "
 dd if=/dev/zero of=${target_disk} bs=4M >&2 || true
 echo "done."
 
-echo -n "Preparing block device... "
+echo -n "Preparing block device '${target_disk}'... "
 # New GPT, part 1 64MB ESP, part 2 960MB BOOT, part 3 inf LVM PV
 echo -e "o\ny\nn\n1\n\n64M\nEF00\nn\n2\n\n960M\n8300\nn\n3\n\n\n8E00\nw\ny\n" | gdisk ${target_disk} >&2
 echo "done."
