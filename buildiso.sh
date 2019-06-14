@@ -33,14 +33,12 @@ prepare_iso() {
     rmdir ${iso_tempdir} &>/dev/null
     sudo cp -a grub.cfg ${tempdir}/installer/boot/grub/grub.cfg &>/dev/null || fail "Error copying grub.cfg file."
     sudo cp -a menu.cfg ${tempdir}/installer/isolinux/menu.cfg &>/dev/null || fail "Error copying menu.cfg file."
-    sudo mv ${tempdir}/installer/live/vmlinuz* ${tempdir}/installer/live/vmlinuz &>/dev/null || fail "Error renaming kernel."
-    sudo mv ${tempdir}/installer/live/initrd.img* ${tempdir}/installer/live/initrd.img || fail "Error renaming initrd."
     echo "done."
 }
 
 prepare_rootfs() {
     echo -n "Preparing Debian live installation via debootstrap... "
-    SQUASHFS_PKGLIST="mdadm,lvm2,parted,gdisk,debootstrap,grub-pc,linux-image-amd64,sipcalc"
+    SQUASHFS_PKGLIST="mdadm,lvm2,parted,gdisk,debootstrap,grub-pc,linux-image-amd64,sipcalc,live-boot"
     test -d debootstrap/ || \
     sudo /usr/sbin/debootstrap \
         --include=${SQUASHFS_PKGLIST} \
@@ -52,6 +50,8 @@ prepare_rootfs() {
     echo "done."
    
     echo -n "Configuring Debian live installation... "
+    sudo cp -a debootstrap/boot/vmlinuz* ${tempdir}/installer/live/vmlinuz &>/dev/null || fail "Error copying kernel."
+    sudo cp -a debootstrap/boot//initrd.img* ${tempdir}/installer/live/initrd.img &>/dev/null || fail "Error copying initrd."
     sudo cp ${tempdir}/rootfs/lib/systemd/system/getty\@.service ${tempdir}/rootfs/etc/systemd/system/getty@tty1.service &>/dev/null || fail "Error copying getty override to tempdir."
     sudo sed -i \
         's|/sbin/agetty|/sbin/agetty --autologin root|g' \
