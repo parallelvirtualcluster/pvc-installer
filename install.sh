@@ -155,6 +155,23 @@ set -o errexit
 exec 1> >( tee -ia ${logfile} )
 exec 2> >( tee -ia ${logfile} >/dev/null )
 
+cleanup() {
+    echo -n "Cleaning up... "
+    umount ${target}/sys >&2
+    umount ${target}/proc >&2
+    umount ${target}/dev/pts >&2
+    umount ${target}/dev >&2
+    umount ${target}/var/lib/ceph >&2
+    umount ${target}/boot/efi >&2
+    umount ${target}/boot >&2
+    umount ${target} >&2
+    vgchange -an >&2
+    rmdir ${target} >&2
+    echo "done."
+    echo
+}
+trap cleanup EXIT
+
 echo -n "Bringing up primary network interface in ${target_netformat} mode... "
 case ${target_netformat} in
     'static')
@@ -190,34 +207,34 @@ partprobe >&2
 echo "done."
 
 echo -n "Creating LVM PV... "
-pvcreate -ffy ${target_disk}3 >&2
+yes | pvcreate -ffy ${target_disk}3 >&2
 echo "done."
 
 echo -n "Creating LVM VG named 'vgx'... "
-vgcreate vgx ${target_disk}3 >&2
+yes | vgcreate vgx ${target_disk}3 >&2
 echo "done."
 
 echo -n "Creating root logical volume (16GB, ext4)... "
 lvcreate -L 16G -n root vgx >&2
-mkfs.ext4 /dev/vgx/root >&2
+yes | mkfs.ext4 /dev/vgx/root >&2
 echo "done."
 
 echo -n "Creating ceph logical volume (16GB, ext4)... "
-lvcreate -L 16G -n ceph vgx >&2
+yes | lvcreate -L 16G -n ceph vgx >&2
 mkfs.ext4 /dev/vgx/ceph >&2
 echo "done."
 
 echo -n "Creating swap logical volume (8GB)... "
 lvcreate -L 8G -n swap vgx >&2
-mkswap -f /dev/vgx/swap >&2
+yes | mkswap -f /dev/vgx/swap >&2
 echo "done."
 
 echo -n "Creating boot partition filesystem... "
-mkfs.ext2 ${target_disk}2 >&2
+yes | mkfs.ext2 ${target_disk}2 >&2
 echo "done."
 
 echo -n "Creating ESP partition filesystem... "
-mkdosfs -F32 ${target_disk}1 >&2
+yes | mkdosfs -F32 ${target_disk}1 >&2
 echo "done."
 
 echo -n "Mounting disks on temporary target... "
@@ -287,17 +304,7 @@ chroot ${target} grub-install --target=x86_64-efi ${target_disk} >&2
 chroot ${target} update-grub >&2
 echo "done."
 
-echo -n "Cleaning up... "
-umount ${target}/sys >&2
-umount ${target}/proc >&2
-umount ${target}/dev/pts >&2
-umount ${target}/dev >&2
-umount ${target}/var/lib/ceph >&2
-umount ${target}/boot/efi >&2
-umount ${target}/boot >&2
-umount ${target} >&2
-echo "done."
-echo
+cleanup
 
 titlestring_text="| PVC node installation finished. Press <Enter> to reboot into the installed system. |"
 titlestring_len="$( wc -c <<<"${titlestring_text}" )"
