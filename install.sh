@@ -265,9 +265,10 @@ wget -O ${target}/var/home/deploy/.ssh/authorized_keys ${target_keys_url}
 else
 echo "${target_password}" | chroot ${target} passwd --stdin deploy >&2
 fi
+echo "done."
 
 echo -n "Setting hostname... "
-echo "${target_hostname}" | sudo tee ${target}/etc/hostname >&2
+echo "${target_hostname}" | tee ${target}/etc/hostname >&2
 echo "done."
 
 echo -n "Setting /etc/issue generator... "
