@@ -33,9 +33,8 @@ prepare_iso() {
     rmdir ${iso_tempdir} &>/dev/null
     sudo cp -a grub.cfg ${tempdir}/installer/boot/grub/grub.cfg &>/dev/null || fail "Error copying grub.cfg file."
     sudo cp -a menu.cfg ${tempdir}/installer/isolinux/menu.cfg &>/dev/null || fail "Error copying menu.cfg file."
-    kernver=$( basename debootstrap/boot/vmlinuz* | head -1 | sed 's/vmlinuz-//' )
-    sudo cp -a debootstrap/boot/vmlinuz-${kernver} ${tempdir}/installer/live/vmlinuz &>/dev/null || fail "Error copying kernel."
-    sudo cp -a debootstrap/boot/initrd.img-${kernver} ${tempdir}/installer/live/initrd.img || fail "Error copying initrd."
+    sudo mv ${tempdir}/installer/live/vmlinuz* ${tempdir}/installer/live/vmlinuz &>/dev/null || fail "Error renaming kernel."
+    sudo mv ${tempdir}/installer/live/initrd.img* ${tempdir}/installer/live/initrd.img || fail "Error renaming initrd."
     echo "done."
 }
 
