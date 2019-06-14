@@ -190,7 +190,7 @@ partprobe >&2
 echo "done."
 
 echo -n "Creating LVM PV... "
-pvcreate -ff ${target_disk}3 >&2
+pvcreate -ffy ${target_disk}3 >&2
 echo "done."
 
 echo -n "Creating LVM VG named 'vgx'... "
@@ -199,17 +199,25 @@ echo "done."
 
 echo -n "Creating root logical volume (16GB, ext4)... "
 lvcreate -L 16G -n root vgx >&2
-mkfs.ext4 -f /dev/vgx/root >&2
+mkfs.ext4 /dev/vgx/root >&2
 echo "done."
 
 echo -n "Creating ceph logical volume (16GB, ext4)... "
 lvcreate -L 16G -n ceph vgx >&2
-mkfs.ext4 -f /dev/vgx/ceph >&2
+mkfs.ext4 /dev/vgx/ceph >&2
 echo "done."
 
 echo -n "Creating swap logical volume (8GB)... "
 lvcreate -L 8G -n swap vgx >&2
 mkswap -f /dev/vgx/swap >&2
+echo "done."
+
+echo -n "Creating boot partition filesystem... "
+mkfs.ext2 ${target_disk}2 >&2
+echo "done."
+
+echo -n "Creating ESP partition filesystem... "
+mkdosfs -F32 ${target_disk}1 >&2
 echo "done."
 
 echo -n "Mounting disks on temporary target... "
