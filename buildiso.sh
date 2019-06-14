@@ -7,7 +7,8 @@
 # using a standard Debian intaller ISO. The end system is suitable
 # for immediate bootstrapping with the PVC Ansible roles.
 
-liveisofile="$( pwd )/debian-live-buster-DI-rc1-amd64-standard.iso"
+liveisofile="debian-live-buster-DI-rc1-amd64-standard.iso"
+liveisourl="https://cdimage.debian.org/mirror/cdimage/buster_di_rc1-live/amd64/iso-hybrid/${liveisofile}"
 
 which debootstrap &>/dev/null || fail "This script requires debootstrap."
 which mksquashfs &>/dev/null || fail "This script requires squashfs."
@@ -29,9 +30,15 @@ fail() {
 }
 
 prepare_iso() {
-    echo -n "Creating directories... "
+    echo -n "Creating temporary directories... "
     mkdir ${tempdir}/rootfs/ ${tempdir}/installer/ || fail "Error creating temporary directories."
     echo "done."
+
+    if [[ ! -f ${liveisofile} ]]; then
+        echo -n "Downloading Debian LiveISO... "
+        wget -O ${liveisofile} ${liveisourl}
+        echo "done."
+    fi
 
     echo -n "Extracting Debian LiveISO files... "
     iso_tempdir=$( mktemp -d )
