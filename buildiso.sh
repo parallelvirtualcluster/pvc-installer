@@ -7,8 +7,10 @@
 # using a standard Debian intaller ISO. The end system is suitable
 # for immediate bootstrapping with the PVC Ansible roles.
 
-liveisofile="debian-live-buster-DI-rc1-amd64-standard.iso"
-liveisourl="https://cdimage.debian.org/mirror/cdimage/buster_di_rc1-live/amd64/iso-hybrid/${liveisofile}"
+isofilename="pvc-installer.iso"
+
+srcliveisofile="debian-live-buster-DI-rc1-amd64-standard.iso"
+srcliveisourl="https://cdimage.debian.org/mirror/cdimage/buster_di_rc1-live/amd64/iso-hybrid/${srcliveisofile}"
 
 which debootstrap &>/dev/null || fail "This script requires debootstrap."
 which mksquashfs &>/dev/null || fail "This script requires squashfs."
@@ -34,15 +36,15 @@ prepare_iso() {
     mkdir ${tempdir}/rootfs/ ${tempdir}/installer/ || fail "Error creating temporary directories."
     echo "done."
 
-    if [[ ! -f ${liveisofile} ]]; then
+    if [[ ! -f ${srcliveisofile} ]]; then
         echo -n "Downloading Debian LiveISO... "
-        wget -O ${liveisofile} ${liveisourl}
+        wget -O ${srcliveisofile} ${srcliveisourl}
         echo "done."
     fi
 
     echo -n "Extracting Debian LiveISO files... "
     iso_tempdir=$( mktemp -d )
-    sudo mount ${liveisofile} ${iso_tempdir} &>/dev/null || fail "Error mounting LiveISO file."
+    sudo mount ${srcliveisofile} ${iso_tempdir} &>/dev/null || fail "Error mounting LiveISO file."
 	sudo rsync -au --exclude live/filesystem.squashfs ${iso_tempdir}/ ${tempdir}/installer/ &>/dev/null || fail "Error extracting LiveISO files."
     sudo umount ${iso_tempdir} &>/dev/null || fail "Error unmounting LiveISO file."
     rmdir ${iso_tempdir} &>/dev/null
@@ -103,13 +105,13 @@ build_iso() {
        -e boot/grub/efi.img \
        -no-emul-boot \
        -isohybrid-gpt-basdat \
-       -o ../pvc-installer.iso \
+       -o ../${isofilename} \
        . &>/dev/null || fail "Error creating ISO file."
     popd &>/dev/null
     echo "done."
 
-    echo -n "Moving generated ISO to './pvc-installer.iso'... "
-    mv ${tempdir}/pvc-installer.iso ../pvc-installer.iso &>/dev/null || fail "Error moving ISO file."
+    echo -n "Moving generated ISO to './${isofilename}'... "
+    mv ${tempdir}/${isofilename} ../${isofilename} &>/dev/null || fail "Error moving ISO file."
     echo "done."
 }
 
