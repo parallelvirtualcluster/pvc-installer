@@ -290,6 +290,7 @@ echo "${target_hostname}" | tee ${target}/etc/hostname >&2
 echo "done."
 
 echo -n "Setting /etc/issue generator... "
+mkdir -p ${target}/etc/network/if-up.d >&2
 echo -e "#!/bin/sh
 IP=\"\$( ip -4 addr show dev ${target_interface} | grep inet | awk '{ print \$2 }' | head -1 )\"
 echo \"Debian GNU/Linux 10 \\\\n \\\\l
