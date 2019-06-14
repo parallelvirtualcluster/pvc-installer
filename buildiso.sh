@@ -73,7 +73,7 @@ prepare_iso() {
     mkdir ${tempdir}/rootfs/ ${tempdir}/installer/ &>/dev/null || fail "Error creating temporary directories."
     echo "done."
 
-    if [[ ! -f ${srcliveisofile} ]]; then
+    if [[ ! -f artifacts/${srcliveisofile} ]]; then
         echo -n "Downloading Debian Live ISO... "
         wget -O artifacts/${srcliveisofile} ${srcliveisourl} &>/dev/null || fail "Error downloading source ISO."
         echo "done."
