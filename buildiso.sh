@@ -79,7 +79,7 @@ prepare_rootfs() {
 build_iso() {
     echo -n "Copying live boot configurations... "
     sudo cp -a grub.cfg ${tempdir}/installer/boot/grub/grub.cfg &>/dev/null || fail "Error copying grub.cfg file."
-    sudo cp -a menu.cfg ${tempdir}/installer/isolinux/menu.cfg &>/dev/null || fail "Error copying menu.cfg file."
+    sudo cp -a isolinux.cfg ${tempdir}/installer/isolinux/isolinux.cfg &>/dev/null || fail "Error copying isolinux.cfg file."
     sudo cp -a splash.png ${tempdir}/installer/isolinux/splash.png &>/dev/null || fail "Error copying splash.png file."
     echo "done."
 
@@ -102,7 +102,7 @@ build_iso() {
     echo "done."
 
     echo -n "Moving generated ISO to '$(pwd)/pvc-installer.iso'... "
-    mv ${tempdir}/pvc-installer.iso pvc-installer-new.iso &>/dev/null || fail "Error moving ISO file."
+    mv ${tempdir}/pvc-installer.iso pvc-installer.iso &>/dev/null || fail "Error moving ISO file."
     echo "done."
 }
 
