@@ -172,6 +172,10 @@ case ${target_netformat} in
 esac
 echo "done."
 
+echo -n "Disabing existing volume groups... "
+vgchange -an >&2 || true
+echo "done."
+
 echo -n "Zeroing block device '${target_disk}'... "
 dd if=/dev/zero of=${target_disk} bs=4M >&2 || true
 echo "done."
