@@ -158,6 +158,7 @@ exec 2> >( tee -ia ${logfile} >/dev/null )
 cleanup() {
     set +o errexit
     echo -n "Cleaning up... "
+    umount ${target}/run >&2
     umount ${target}/sys >&2
     umount ${target}/proc >&2
     umount ${target}/dev/pts >&2
@@ -305,20 +306,27 @@ mount --bind /dev ${target}/dev >&2
 mount --bind /dev/pts ${target}/dev/pts >&2
 mount --bind /proc ${target}/proc >&2
 mount --bind /sys ${target}/sys >&2
-chroot ${target} grub-install --target=x86_64-efi ${target_disk} >&2
-chroot ${target} update-grub >&2
+mount --bind /run ${target}/run >&2
+if [[ -d /sys/firmware/efi ]]; then
+    bios_target="x86_64-efi"
+else
+    bios_target="i386-pc"
+fi
+chroot ${target} grub-install --target=${bios_target} ${target_disk} >&2
+chroot ${target} grub-mkconfig -o /boot/grub/grub.cfg >&2
 echo "done."
 
 cleanup
 
-titlestring_text="| PVC node installation finished. Press <Enter> to reboot into the installed system. |"
+titlestring_text="| PVC node installation finished. Next steps: |"
 titlestring_len="$( wc -c <<<"${titlestring_text}" )"
-for i in $( seq 2 ${titlestring_len} ); do echo -n "-"; done; echo
+for i in $( seq 2 85 ); do echo -n "-"; done; echo
 echo "${titlestring_text}"
-echo "| On successful boot, verify the system is configured as you would expect, add any   |"
-echo "| additional interfaces to the /etc/network/interfaces file, and then run the PVC    |"
-echo "| Ansible role against this host to complete deploying this PVC node.                |"
-for i in $( seq 2 ${titlestring_len} ); do echo -n "-"; done; echo
+echo "| 1. Press <enter> to reboot the system.                                             |"
+echo "| 2. Boot the PVC base hypervisor and verify SSH access (IP shown on login screen).  |"
+echo "| 3. Configure /etc/network/interfaces to the cluster specifications.                |"
+echo "| 4. Proceed with system deployment via PVC Ansible."
+for i in $( seq 2 85 ); do echo -n "-"; done; echo
 echo
 read
 
