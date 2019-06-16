@@ -137,6 +137,14 @@ if [[ -z ${target_keys_url} ]]; then
             echo "The specified passwords do not match or are empty."
         fi
     done
+else
+    while ! wget -O /dev/null ${target_keys_url} &>/dev/null; do
+        echo
+        echo "Please enter a valid SSH keys URL."
+        echo
+        echo -n "> "
+        read target_keys_url
+    done
 fi
 echo
 
