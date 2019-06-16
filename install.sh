@@ -307,6 +307,12 @@ EOF" | tee ${target}/etc/network/if-up.d/issue-gen >&2
 chmod +x ${target}/etc/network/if-up.d/issue-gen 1>&2
 echo "done."
 
+echo -n "Generating host rsa and ed25519 keys... "
+rm ${target}/etc/ssh/ssh_host_*_key* >&2
+chroot ${target} ssh-keygen -t rsa -N "" -f /etc/ssh/ssh_host_rsa_key >&2
+chroot ${target} ssh-keygen -t ed25519 -N "" -f /etc/ssh/ssh_host_ed25519_key >&2
+echo "done."
+
 echo -n "Installing GRUB bootloader... "
 mount --bind /dev ${target}/dev >&2
 mount --bind /dev/pts ${target}/dev/pts >&2
