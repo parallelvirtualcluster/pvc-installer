@@ -318,15 +318,15 @@ echo "done."
 
 cleanup
 
-titlestring_text="| PVC node installation finished. Next steps: |"
+titlestring_text="| PVC node installation finished. Next steps:                                       |"
 titlestring_len="$( wc -c <<<"${titlestring_text}" )"
-for i in $( seq 2 85 ); do echo -n "-"; done; echo
+for i in $( seq 2 86 ); do echo -n "-"; done; echo
 echo "${titlestring_text}"
-echo "| 1. Press <enter> to reboot the system.                                             |"
-echo "| 2. Boot the PVC base hypervisor and verify SSH access (IP shown on login screen).  |"
-echo "| 3. Configure /etc/network/interfaces to the cluster specifications.                |"
-echo "| 4. Proceed with system deployment via PVC Ansible."
-for i in $( seq 2 85 ); do echo -n "-"; done; echo
+echo "| 1. Press <enter> to reboot the system.                                            |"
+echo "| 2. Boot the PVC base hypervisor and verify SSH access (IP shown on login screen). |"
+echo "| 3. Configure /etc/network/interfaces to the cluster specifications.               |"
+echo "| 4. Proceed with system deployment via PVC Ansible.                                |"
+for i in $( seq 2 86 ); do echo -n "-"; done; echo
 echo
 read
 
