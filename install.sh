@@ -224,26 +224,32 @@ echo -n "Creating LVM VG named 'vgx'... "
 yes | vgcreate vgx ${target_disk}3 >&2
 echo "done."
 
-echo -n "Creating root logical volume (16GB, ext4)... "
+echo -n "Creating root logical volume (16GB)... "
 lvcreate -L 16G -n root vgx >&2
+echo "done."
+echo -n "Creating filesystem on root logical volume (ext4)... "
 yes | mkfs.ext4 /dev/vgx/root >&2
 echo "done."
 
 echo -n "Creating ceph logical volume (16GB, ext4)... "
 yes | lvcreate -L 16G -n ceph vgx >&2
+echo "done."
+echo -n "Creating filesystem on ceph logical volume (ext4)... "
 mkfs.ext4 /dev/vgx/ceph >&2
 echo "done."
 
 echo -n "Creating swap logical volume (8GB)... "
 lvcreate -L 8G -n swap vgx >&2
+echo "done."
+echo -n "Creating swap on swap logical volume... "
 yes | mkswap -f /dev/vgx/swap >&2
 echo "done."
 
-echo -n "Creating boot partition filesystem... "
+echo -n "Creating filesystem on boot partition (ext2)... "
 yes | mkfs.ext2 ${target_disk}2 >&2
 echo "done."
 
-echo -n "Creating ESP partition filesystem... "
+echo -n "Creating filesystem on ESP partition (vfat)... "
 yes | mkdosfs -F32 ${target_disk}1 >&2
 echo "done."
 
@@ -294,10 +300,6 @@ echo "${target_password}" | chroot ${target} passwd --stdin deploy >&2
 fi
 echo "done."
 
-echo -n "Setting hostname... "
-echo "${target_hostname}" | tee ${target}/etc/hostname >&2
-echo "done."
-
 echo -n "Setting NOPASSWD for sudo group... "
 sed -i 's/^%sudo\tALL=(ALL:ALL) ALL/%sudo\tALL=(ALL:ALL) NOPASSWD: ALL/' ${target}/etc/sudoers
 echo "done."
@@ -319,6 +321,10 @@ echo -n "Generating host rsa and ed25519 keys... "
 rm ${target}/etc/ssh/ssh_host_*_key* >&2
 chroot ${target} ssh-keygen -t rsa -N "" -f /etc/ssh/ssh_host_rsa_key >&2
 chroot ${target} ssh-keygen -t ed25519 -N "" -f /etc/ssh/ssh_host_ed25519_key >&2
+echo "done."
+
+echo -n "Setting hostname... "
+echo "${target_hostname}" | tee ${target}/etc/hostname >&2
 echo "done."
 
 echo -n "Installing GRUB bootloader... "
