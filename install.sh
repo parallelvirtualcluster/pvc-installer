@@ -290,14 +290,19 @@ echo -n "Setting hostname... "
 echo "${target_hostname}" | tee ${target}/etc/hostname >&2
 echo "done."
 
+echo -n "Setting NOPASSWD for sudo group... "
+sed -i 's/^%sudo\tALL=(ALL:ALL) ALL/%sudo\tALL=(ALL:ALL) NOPASSWD: ALL/' ${target}/etc/sudoers
+echo "done."
+
 echo -n "Setting /etc/issue generator... "
 mkdir -p ${target}/etc/network/if-up.d >&2
 echo -e "#!/bin/sh
 IP=\"\$( ip -4 addr show dev ${target_interface} | grep inet | awk '{ print \$2 }' | head -1 )\"
-echo \"Debian GNU/Linux 10 \\\\n \\\\l
+cat <<EOF >/etc/issue
+Debian GNU/Linux 10 \\\\n \\\\l
 
 Primary interface IP address: \$IP
-\" > /etc/issue" | tee ${target}/etc/network/if-up.d/issue-gen >&2
+EOF" | tee ${target}/etc/network/if-up.d/issue-gen >&2
 chmod +x ${target}/etc/network/if-up.d/issue-gen 1>&2
 echo "done."
 
