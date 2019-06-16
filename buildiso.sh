@@ -121,6 +121,9 @@ prepare_rootfs() {
     
     echo -n "Generating squashfs image of live installation... "
     if [[ ! -f artifacts/filesystem.squashfs || -z ${usecachedsquashfs} ]]; then
+        if [[ -f artifacts/filesystem.squashfs ]]; then
+            rm -f artifacts/filesystem.squashfs &>/dev/null
+        fi
         sudo nice mksquashfs ${tempdir}/rootfs/ artifacts/filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
     fi
     sudo cp artifacts/filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
