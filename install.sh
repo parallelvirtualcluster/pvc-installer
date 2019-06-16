@@ -267,8 +267,8 @@ echo -n "Adding fstab entries... "
 echo "/dev/mapper/vgx-root / ext4 errors=remount-ro 0 1" | tee -a ${target}/etc/fstab >&2
 echo "/dev/mapper/vgx-ceph /var/lib/ceph ext4 errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
 echo "/dev/mapper/vgx-swap nonde swap sw 0 0" | tee -a ${target}/etc/fstab >&2
-echo "${bypath_disk}2 /boot ext2 defaults 0 2" | tee -a ${target}/etc/fstab >&2
-echo "${bypath_disk}1 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc/fstab >&2
+echo "${bypath_disk}p2 /boot ext2 defaults 0 2" | tee -a ${target}/etc/fstab >&2
+echo "${bypath_disk}p1 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc/fstab >&2
 echo "done."
 
 echo -n "Adding interface segment... "
