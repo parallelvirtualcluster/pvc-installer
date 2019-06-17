@@ -34,10 +34,10 @@ done
 
 disks="$(
     for disk in /dev/sd?; do
-        gdisk_data="$( gdisk -l ${disk} 2>/dev/null )"
+        disk_data="$( fdisk -l ${disk} 2>/dev/null )"
         echo -n "${disk}"
-        echo -n "\t$( grep "^Model:" <<<"${gdisk_data}" | awk '{ $1=""; print $0 }' )"
-        echo -n "\t$( grep "^Disk ${disk}:" <<<"${gdisk_data}" | awk '{ $1=$2=""; print $0 }' )"
+        echo -en "\t$( grep "^Disk model:" <<<"${disk_data}" | awk '{ $1=""; print $0 }' )"
+        echo -en "  $( grep "^Disk ${disk}:" <<<"${disk_data}" | awk '{ $1=""; $2="size:"; print $0 }' )"
         echo
     done
 )"
