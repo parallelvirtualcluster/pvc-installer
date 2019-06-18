@@ -7,6 +7,11 @@
 # using a standard Debian intaller ISO. The end system is suitable
 # for immediate bootstrapping with the PVC Ansible roles.
 
+fail() {
+    echo "$@"
+    exit 1
+}
+
 which debootstrap &>/dev/null || fail "This script requires debootstrap."
 which mksquashfs &>/dev/null || fail "This script requires squashfs."
 which xorriso &>/dev/null || fail "This script requires xorriso."
