@@ -345,7 +345,8 @@ echo "Edit the /etc/network/interfaces file in the target before completing setu
 read edit_ifaces
 if [[ ${edit_ifaces} == 'y' or ${edit_ifaces} == 'Y' ]]; then
     vim ${target}/etc/network/interfaces
-fi  
+fi
+echo
 
 cleanup
 
