@@ -12,6 +12,12 @@ Note that artifacts of the build (the LiveCD ISO, debootstrap directory, and squ
 
 The built ISO can be booted in either BIOS (traditional ISOLinux) or UEFI (Grub2) modes. It is strongly recommended to use the latter if the system supports it for maximum flexibility.
 
+## Installing
+
+The installer script will ask several questions to configure the bare minimum system needed for [`pvc-ansible`](https://git.bonifacelabs.ca/parallelvirtualcluster/pvc-ansible) to configure the node.
+
+Follow the prompts carefully; if you make a mistake, you can ^C to cancel the installer, then re-run via `/install.sh` from the resulting root shell.
+
 ## License
 
 Copyright (C) 2018-2019  Joshua M. Boniface <joshua@boniface.me>
