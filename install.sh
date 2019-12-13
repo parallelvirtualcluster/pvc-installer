@@ -16,6 +16,9 @@ echo "------------------------------------------------"
 echo "| Preparing to install a PVC node base system. |"
 echo "------------------------------------------------"
 echo
+echo "NOTE: If you make a mistake and need to restart the installer while answering"
+echo "      the questions below, you may do so by typing ^C to cancel the script,"
+echo "      then re-running it by calling /install.sh in the resulting shell."
 
 echo "1) Please enter a fully-qualified hostname for the system."
 while [[ -z ${target_hostname} ]]; do
@@ -58,14 +61,16 @@ while [[ ! -b ${target_disk} ]]; do
     echo
 done
 
-for interface in $( ip address | grep '^[0-9]' | grep 'enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
+for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
     ip link set ${interface} up
 done
 sleep 2
 interfaces="$(
     ip address | grep '^[0-9]' | grep 'enp\|ens\|wlp' | awk '{ print $2"\t"$3 }' | tr -d ':'
 )"
-echo "3a) Please enter the primary network interface for external connectivity."
+echo "3a) Please enter the primary network interface for external connectivity. If"
+echo "    no entries are shown here, ensure a cable is connected, then restart the"
+echo "    installer."
 echo
 echo "Available interfaces:"
 echo
