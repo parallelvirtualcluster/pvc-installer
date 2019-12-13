@@ -18,7 +18,9 @@ which xorriso &>/dev/null || fail "This script requires xorriso."
 test -f /usr/lib/ISOLINUX/isohdpfx.bin &>/dev/null || fail "This script requires isolinux."
 
 isofilename="pvc-installer_$(date +%Y-%m-%d).iso"
-srcliveisourl="https://cdimage.debian.org/mirror/cdimage/buster_di_rc1-live/amd64/iso-hybrid/debian-live-buster-DI-rc1-amd64-standard.iso"
+srcliveisopath="https://cdimage.debian.org/mirror/cdimage/release/current-live/amd64/iso-hybrid"
+srcliveisofilename="$( wget -O- ${srcliveisopath}/ | grep 'debian-live-.*-amd64-standard.iso' | awk -F '"' '{ print $6 }' )"
+srcliveisourl="${srcliveisopath}/${srcliveisofilename}"
 
 show_help() {
 	echo -e "PVC install ISO generator"
