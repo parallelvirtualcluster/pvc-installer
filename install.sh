@@ -19,6 +19,7 @@ echo
 echo "NOTE: If you make a mistake and need to restart the installer while answering"
 echo "      the questions below, you may do so by typing ^C to cancel the script,"
 echo "      then re-running it by calling /install.sh in the resulting shell."
+echo
 
 echo "1) Please enter a fully-qualified hostname for the system."
 while [[ -z ${target_hostname} ]]; do
