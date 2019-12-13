@@ -88,7 +88,7 @@ prepare_iso() {
 
     if [[ ! -f artifacts/${srcliveisofile} ]]; then
         echo -n "Downloading Debian Live ISO... "
-        wget -O artifacts/${srcliveisofile} ${srcliveisourl} &>/dev/null || { rm -f artifacts/${srcliveisofile}; fail "Error downloading source ISO." }
+        wget -O artifacts/${srcliveisofile} ${srcliveisourl} &>/dev/null || { rm -f artifacts/${srcliveisofile}; fail "Error downloading source ISO."; }
         echo "done."
     fi
 
