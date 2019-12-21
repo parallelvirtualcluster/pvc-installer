@@ -299,8 +299,8 @@ chroot ${target} useradd -u 200 -d /var/home/deploy -m -s /bin/bash -g operator 
 chroot ${target} mkdir -p /var/home/deploy/.ssh
 if [[ -n ${target_keys_url} ]]; then
 wget -O ${target}/var/home/deploy/.ssh/authorized_keys ${target_keys_url}
-chmod 0600 /var/home/deploy/.ssh/authorized_keys
-chown -R deploy:operator /var/home/deploy
+chroot ${target} chmod 0600 /var/home/deploy/.ssh/authorized_keys
+chroot ${target} chown -R deploy:operator /var/home/deploy
 else
 echo "${target_password}" | chroot ${target} passwd --stdin deploy >&2
 fi
