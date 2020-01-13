@@ -352,7 +352,7 @@ set +o errexit
 echo
 echo "Edit the /etc/network/interfaces file in the target before completing setup? [y/N]"
 read edit_ifaces
-if [[ ${edit_ifaces} == 'y' or ${edit_ifaces} == 'Y' ]]; then
+if [[ ${edit_ifaces} == 'y' || ${edit_ifaces} == 'Y' ]]; then
     vim ${target}/etc/network/interfaces
 fi
 echo
