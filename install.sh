@@ -46,6 +46,7 @@ disks="$(
 
 echo "2) Please enter the disk to install the PVC base system to. This disk will be"
 echo "wiped, an LVM PV created on it, and the system installed to this LVM."
+echo "NOTE: PVC requires a disk of >16GB to be installed to. 32GB is the recommended minimum."
 echo
 echo "Available disks:"
 echo
@@ -186,6 +187,34 @@ cleanup() {
 }
 trap cleanup EXIT
 
+echo -n "Determining block device and partition sizing... "
+blockdev_size="$(( $( blockdev --getsize64 ${target_disk} ) / 1024 / 1024 / 1024 - 1))"
+if [[ ${blockdev_size} -ge 58 ]]; then
+    # Sufficiently large system disk (>=64GB), use large partitions
+    size_root_lv="32"
+    size_ceph_lv="4"
+    size_swap_lv="16"
+    echo "found large disk, using partition sizes 32/4/16."
+elif [[ ${blockdev_size} -ge 28 ]]; then
+    # Relatively large disk (>=32GB), use small partitions
+    size_root_lv="16"
+    size_ceph_lv="2"
+    size_swap_lv="8"
+    echo "found medium disk, using partition sizes 16/2/8."
+elif [[ ${blockdev_size} -ge 13 ]]; then
+    # Small disk (>=16GB), use very small partitions
+    size_root_lv="8"
+    size_ceph_lv="2"
+    size_swap_lv="2"
+    echo "found small disk, using partition sizes 8/2/2."
+else
+    # Extremely small disk, (<16GB) - bail out, this is too small
+    echo
+    echo "FAILURE - The specified disk is too small (<16GB). PVC must be installed on a disk of >16GB."
+    read
+    exit 1
+fi
+
 echo -n "Bringing up primary network interface in ${target_netformat} mode... "
 case ${target_netformat} in
     'static')
@@ -228,24 +257,24 @@ echo -n "Creating LVM VG named 'vgx'... "
 yes | vgcreate vgx ${target_disk}3 >&2
 echo "done."
 
-echo -n "Creating root logical volume (32GB)... "
-lvcreate -L 32G -n root vgx >&2
+echo -n "Creating root logical volume (${size_root_lv}GB)... "
+lvcreate -L ${size_root_lv}G -n root vgx >&2
 echo "done."
 echo -n "Creating filesystem on root logical volume (ext4)... "
 yes | mkfs.ext4 /dev/vgx/root >&2
 echo "done."
 
-echo -n "Creating ceph logical volume (8GB, ext4)... "
-yes | lvcreate -L 8G -n ceph vgx >&2
+echo -n "Creating ceph logical volume (${size_ceph_lv}GB)... "
+yes | lvcreate -L ${size_ceph_lv}G -n ceph vgx >&2
 echo "done."
 echo -n "Creating filesystem on ceph logical volume (ext4)... "
 mkfs.ext4 /dev/vgx/ceph >&2
 echo "done."
 
-echo -n "Creating swap logical volume (8GB)... "
-lvcreate -L 8G -n swap vgx >&2
+echo -n "Creating swap logical volume (${size_swap_lv}GB)... "
+lvcreate -L ${size_swap_lv}G -n swap vgx >&2
 echo "done."
-echo -n "Creating swap on swap logical volume... "
+echo -n "Creating swap space on swap logical volume... "
 yes | mkswap -f /dev/vgx/swap >&2
 echo "done."
 
