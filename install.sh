@@ -116,6 +116,24 @@ else
     echo
 fi
 
+echo -n "Bringing up primary network interface in ${target_netformat} mode... "
+case ${target_netformat} in
+    'static')
+        ip link set ${target_interface} up >&2 || true
+        ip address add ${target_ipaddr} dev ${target_interface} >&2 || true
+        ip route add default via ${target_defgw} >&2 || true
+        formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
+        formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
+        target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
+    ;;
+    'dhcp')
+        dhclient ${target_interface} >&2
+        target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}"
+    ;;
+esac
+echo "done."
+echo
+
 echo "4) Please enter an HTTP URL containing a text list of SSH authorized keys to"
 echo "fetch. These keys will be allowed access to the 'deploy' user via SSH."
 echo "Leave blank to bypass this and use a password instead."
@@ -214,23 +232,6 @@ else
     read
     exit 1
 fi
-
-echo -n "Bringing up primary network interface in ${target_netformat} mode... "
-case ${target_netformat} in
-    'static')
-        ip link set ${target_interface} up >&2 || true
-        ip address add ${target_ipaddr} dev ${target_interface} >&2 || true
-        ip route add default via ${target_defgw} >&2 || true
-        formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
-        formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
-        target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
-    ;;
-    'dhcp')
-        dhclient ${target_interface} >&2
-        target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}"
-    ;;
-esac
-echo "done."
 
 echo -n "Disabing existing volume groups... "
 vgchange -an >&2 || true
