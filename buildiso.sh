@@ -99,7 +99,7 @@ prepare_iso() {
     echo -n "Extracting Debian Live ISO files... "
     iso_tempdir=$( mktemp -d )
     sudo mount artifacts/${srcliveisofile} ${iso_tempdir} &>/dev/null || fail "Error mounting Live ISO file."
-    sudo rsync -au --exclude live/filesystem.squashfs ${iso_tempdir}/ ${tempdir}/installer/ &>/dev/null || fail "Error extracting Live ISO files."
+    sudo rsync -a --exclude live/filesystem.squashfs --exclude isolinux/menu.cfg --exclude isolinux/stdmenu.cfg ${iso_tempdir}/ ${tempdir}/installer/ &>/dev/null || fail "Error extracting Live ISO files."
     sudo umount ${iso_tempdir} &>/dev/null || fail "Error unmounting Live ISO file."
     rmdir ${iso_tempdir} &>/dev/null
     echo "done."
@@ -117,6 +117,11 @@ prepare_rootfs() {
             buster \
             artifacts/debootstrap/ \
             http://ftp.ca.debian.org/debian &>debootstrap.log || fail "Error performing debootstrap."
+        # Grab some additional files in non-free
+        sudo wget http://ftp.ca.debian.org/debian/pool/non-free/f/firmware-nonfree/firmware-bnx2_20190114-2_all.deb -O artifacts/debootstrap/var/cache/apt/archives/firmware-bnx2_20190114-2_all.deb
+        sudo chroot artifacts/debootstrap/ dpkg -i /var/cache/apt/archives/firmware-bnx2_20190114-2_all.deb || fail "Error installing supplemental package firmware-bnx2"
+        sudo wget http://ftp.ca.debian.org/debian/pool/non-free/f/firmware-nonfree/firmware-bnx2x_20190114-2_all.deb -O artifacts/debootstrap/var/cache/apt/archives/firmware-bnx2x_20190114-2_all.deb
+        sudo chroot artifacts/debootstrap/ dpkg -i /var/cache/apt/archives/firmware-bnx2x_20190114-2_all.deb || fail "Error installing supplemental package firmware-bnx2x"
         if [[ -n ${clean_me} ]]; then
             sudo chroot artifacts/debootstrap/ apt clean &>/dev/null || fail "Error cleaning apt cache in debootstrap."
         else
@@ -147,7 +152,7 @@ prepare_rootfs() {
         fi
         sudo nice mksquashfs ${tempdir}/rootfs/ artifacts/filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
     fi
-    sudo cp artifacts/filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
+    sudo rsync -a artifacts/filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
     echo "done."
 }
 
@@ -166,7 +171,7 @@ build_iso() {
         -iso-level 3 \
         -o ../${isofilename} \
         -full-iso9660-filenames \
-        -volid "DEBIAN_CUSTOM" \
+        -volid "PVC_NODE_INSTALLER" \
         -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
         -eltorito-boot \
             isolinux/isolinux.bin \
