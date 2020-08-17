@@ -11,6 +11,13 @@ debmirror="http://debian.mirror.rafal.ca/debian"
 debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python,python2,python3,ca-certificates,ntp"
 suppkglist="firmware-linux,firmware-linux-nonfree"
 
+# DANGER - THIS PASSWORD IS PUBLIC
+# It should be used ONLY immediately after booting the PVC node in a SECURE environment
+# to facilitate troubleshooting of a failed boot. It should NOT be exposed to the Internet,
+# and it should NOT be left in place after system configuration. The PVC Ansible deployment
+# roles will overwrite it by default during configuration.
+root_password="hCb1y2PF"
+
 clear
 
 echo "-----------------------------------------------------"
@@ -341,6 +348,10 @@ echo -n "Adding interface segment... "
 echo -e "${target_interfaces_block}" | tee -a ${target}/etc/network/interfaces >&2
 echo "done."
 
+echo -n "Setting temporary 'root' password... "
+echo "${root_password}" | chroot ${target} passwd --stdin root >&2
+echo "done."
+
 echo -n "Adding 'deploy' user... "
 mv ${target}/home ${target}/var/home >&2
 chroot ${target} useradd -u 200 -d /var/home/deploy -m -s /bin/bash -g operator -G sudo deploy >&2
@@ -416,6 +427,8 @@ echo "| PVC node installation finished. Next steps:                             
 echo "| 1. Press <enter> to reboot the system.                                            |"
 echo "| 2. Boot the PVC base hypervisor and verify SSH access (IP shown on login screen). |"
 echo "| 3. Proceed with system deployment via PVC Ansible.                                |"
+echo "|                                                                                   |"
+echo "| The INSECURE temporary root password if the system will not boot is: ${root_password}   |"
 echo "-------------------------------------------------------------------------------------"
 echo
 read
