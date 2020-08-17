@@ -396,7 +396,7 @@ if [[ -d /sys/firmware/efi ]]; then
 else
     bios_target="i386-pc"
 fi
-chroot ${target} grub-install --target=${bios_target} ${target_disk} >&2
+chroot ${target} grub-install --force --target=${bios_target} ${target_disk} >&2
 chroot ${target} grub-mkconfig -o /boot/grub/grub.cfg >&2
 echo "done."
 
