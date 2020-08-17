@@ -153,18 +153,24 @@ build_iso() {
 
     echo -n "Creating LiveCD ISO... "
     pushd ${tempdir}/installer &>/dev/null
-    xorriso -as mkisofs \
-       -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
-       -c isolinux/boot.cat \
-       -b isolinux/isolinux.bin \
-       -no-emul-boot \
-       -boot-load-size 4 \
-       -boot-info-table \
-       -eltorito-alt-boot \
-       -e boot/grub/efi.img \
-       -no-emul-boot \
-       -isohybrid-gpt-basdat \
-       -o ../${isofilename} \
+    xorriso \
+        -as mkisofs \
+        -iso-level 3 \
+        -o ../${isofilename} \
+        -full-iso9660-filenames \
+        -volid "DEBIAN_CUSTOM" \
+        -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+        -eltorito-boot \
+            isolinux/isolinux.bin \
+            -no-emul-boot \
+            -boot-load-size 4 \
+            -boot-info-table \
+            --eltorito-catalog isolinux/isolinux.cat \
+        -eltorito-alt-boot \
+            -e boot/grub/efi.img \
+            -no-emul-boot \
+            -isohybrid-gpt-basdat \
+        -append_partition 2 0xef boot/grub/efi.img \
        . &>/dev/null || fail "Error creating ISO file."
     popd &>/dev/null
     echo "done."
