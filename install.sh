@@ -349,7 +349,7 @@ echo -e "${target_interfaces_block}" | tee -a ${target}/etc/network/interfaces >
 echo "done."
 
 echo -n "Setting temporary 'root' password... "
-echo "${root_password}" | chroot ${target} passwd --stdin root >&2
+echo "root:${root_password}" | chroot ${target} chpasswd >&2
 echo "done."
 
 echo -n "Adding 'deploy' user... "
@@ -361,7 +361,7 @@ wget -O ${target}/var/home/deploy/.ssh/authorized_keys ${target_keys_url}
 chroot ${target} chmod 0600 /var/home/deploy/.ssh/authorized_keys
 chroot ${target} chown -R deploy:operator /var/home/deploy
 else
-echo "${target_password}" | chroot ${target} passwd --stdin deploy >&2
+echo "deploy:${target_password}" | chroot ${target} chpasswd >&2
 fi
 echo "done."
 
@@ -428,7 +428,7 @@ echo "| 1. Press <enter> to reboot the system.                                  
 echo "| 2. Boot the PVC base hypervisor and verify SSH access (IP shown on login screen). |"
 echo "| 3. Proceed with system deployment via PVC Ansible.                                |"
 echo "|                                                                                   |"
-echo "| The INSECURE temporary root password if the system will not boot is: ${root_password}   |"
+echo "| The INSECURE temporary root password if the system will not boot is: ${root_password}     |"
 echo "-------------------------------------------------------------------------------------"
 echo
 read
