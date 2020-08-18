@@ -426,7 +426,6 @@ if [[ ${launch_chroot} == 'y' || ${edit_ifaces} == 'Y' ]]; then
     echo "Type 'exit' or Ctrl+D to exit chroot."
     chroot ${target} /bin/bash
 fi
-echo
 
 cleanup
 
