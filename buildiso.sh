@@ -107,7 +107,7 @@ prepare_iso() {
 
 prepare_rootfs() {
     echo -n "Preparing Debian live installation via debootstrap... "
-    SQUASHFS_PKGLIST="mdadm,lvm2,parted,gdisk,debootstrap,grub-pc,grub-efi-amd64,linux-image-amd64,sipcalc,live-boot,dosfstools,vim,ca-certificates"
+    SQUASHFS_PKGLIST="mdadm,lvm2,parted,gdisk,debootstrap,grub-pc,grub-efi-amd64,linux-image-amd64,sipcalc,live-boot,dosfstools,vim,ca-certificates,vlan"
     if [[ ! -d artifacts/debootstrap ]]; then
         sudo mkdir -p artifacts/debootstrap/var/cache/apt/archives &>/dev/null
         clean_me="y"

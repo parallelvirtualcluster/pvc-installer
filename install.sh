@@ -59,6 +59,8 @@ echo "2) Please enter the disk to install the PVC base system to. This disk will
 echo "wiped, an LVM PV created on it, and the system installed to this LVM."
 echo "NOTE: PVC requires a disk of >16GB to be installed to. 32GB is the recommended"
 echo "minimum size, and disks larger than 64GB are not particularly useful."
+echo "NOTE: This disk should generally be a RAID-1 volume configured in hardware for"
+echo "maximum redundancy and resiliency."
 echo
 echo "Available disks:"
 echo
@@ -102,7 +104,28 @@ while [[ -z ${target_interface} ]]; do
     echo
 done
 
-echo "3b) Please enter the IP address, in CIDR format [X.X.X.X/YY], of the primary"
+echo -n "3b) Is a tagged vLAN required for the primary network interface? [y/N] "
+read vlans_req
+if [[ ${vlans_req} == 'y' || ${vlans_req} == 'Y' ]]; then
+    echo
+    echo "Please enter the vLAN ID for the interface."
+    while [[ -z ${vlan_id} ]]; do
+        echo
+        echo -n "> "
+        read vlan_id
+        if [[ -z ${vlan_id} ]]; then
+            echo
+            echo "Please enter a numeric vLAN ID."
+            continue
+        fi
+    done
+    echo
+else
+    vlan_id=""
+    echo
+fi
+
+echo "3c) Please enter the IP address, in CIDR format [X.X.X.X/YY], of the primary"
 echo "network interface. Leave blank for DHCP configuration of the interface on boot."
 echo
 echo -n "> "
@@ -110,7 +133,7 @@ read target_ipaddr
 if [[ -n ${target_ipaddr} ]]; then
     target_netformat="static"
     echo
-    echo "3c) Please enter the default gateway IP address of the primary"
+    echo "3d) Please enter the default gateway IP address of the primary"
     echo "network interface."
     while [[ -z ${target_defgw} ]]; do
         echo
@@ -131,19 +154,44 @@ fi
 echo -n "Bringing up primary network interface in ${target_netformat} mode... "
 case ${target_netformat} in
     'static')
-        ip link set ${target_interface} up >&2 || true
-        ip address add ${target_ipaddr} dev ${target_interface} >&2 || true
-        ip route add default via ${target_defgw} >&2 || true
-        formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
-        formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
-        target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
+        if [[ -n ${vlan_id} ]]; then
+            modprobe 8021q >&2
+            vconfig add ${target_interface} ${vlan_id} >&2
+            vlan_interface=${target_interface}.${vlan_id}
+            ip link set ${target_interface} up >&2 || true
+            ip link set ${vlan_interface} up >&2 || true
+            ip address add ${target_ipaddr} dev ${vlan_interface} >&2 || true
+            ip route add default via ${target_defgw} >&2 || true
+            formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
+            formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
+            target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device ${target_interface}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
+            real_interface="${vlan_interface}"
+        else
+            ip link set ${target_interface} up >&2 || true
+            ip address add ${target_ipaddr} dev ${target_interface} >&2 || true
+            ip route add default via ${target_defgw} >&2 || true
+            formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
+            formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
+            target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
+            real_interface="${target_interface}"
+        fi
         cat <<EOF >/etc/resolv.conf
 nameserver 8.8.8.8
 EOF
     ;;
     'dhcp')
-        dhclient ${target_interface} >&2
-        target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}"
+        if [[ -n ${vlan_id} ]]; then
+            modprobe 8021q >&2
+            vconfig add ${target_interface} ${vlan_id} >&2
+            vlan_interface=${target_interface}.${vlan_id}
+            target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device${target_interface}"
+            dhclient ${vlan_interface} >&2
+            real_interface="${vlan_interface}"
+        else
+            target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}"
+            dhclient ${target_interface} >&2
+            real_interface="${target_interface}"
+        fi
     ;;
 esac
 echo "done."
@@ -372,7 +420,7 @@ echo "done."
 echo -n "Setting /etc/issue generator... "
 mkdir -p ${target}/etc/network/if-up.d >&2
 echo -e "#!/bin/sh
-IP=\"\$( ip -4 addr show dev ${target_interface} | grep inet | awk '{ print \$2 }' | head -1 )\"
+IP=\"\$( ip -4 addr show dev ${real_interface} | grep inet | awk '{ print \$2 }' | head -1 )\"
 cat <<EOF >/etc/issue
 Debian GNU/Linux 10 \\\\n \\\\l
 
