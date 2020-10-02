@@ -461,14 +461,14 @@ echo "done."
 
 set +o errexit
 echo
-echo "Edit the /etc/network/interfaces file in the target before completing setup? [y/N]"
+echo -n "Edit the /etc/network/interfaces file in the target before completing setup? [y/N] "
 read edit_ifaces
 if [[ ${edit_ifaces} == 'y' || ${edit_ifaces} == 'Y' ]]; then
     vim ${target}/etc/network/interfaces
 fi
 echo
 
-echo "Launch a chroot shell in the target environment? [y/N]"
+echo -n "Launch a chroot shell in the target environment? [y/N] "
 read launch_chroot
 if [[ ${launch_chroot} == 'y' || ${edit_ifaces} == 'Y' ]]; then
     echo "Type 'exit' or Ctrl+D to exit chroot."
