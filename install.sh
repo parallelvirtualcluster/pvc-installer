@@ -367,7 +367,7 @@ echo "done."
 
 echo -n "Adding non-free repository (firmware, etc.)... "
 mkdir -p ${target}/etc/apt/sources.list.d/ >&2
-echo "deb ${debmirror} ${debrelease} contrib non-free" | tee -a ${target}/etc/apt/sources.list.d/non-free.list >&2
+echo "deb ${debmirror} ${debrelease} contrib non-free" | tee -a ${target}/etc/apt/sources.list >&2
 chroot ${target} apt update >&2
 echo "done."
 
