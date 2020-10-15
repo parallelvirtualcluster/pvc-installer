@@ -387,7 +387,7 @@ done
 echo -n "Adding fstab entries... "
 echo "/dev/mapper/vgx-root / ext4 errors=remount-ro 0 1" | tee -a ${target}/etc/fstab >&2
 echo "/dev/mapper/vgx-ceph /var/lib/ceph ext4 errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
-echo "/dev/mapper/vgx-swap nonde swap sw 0 0" | tee -a ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-swap none swap sw 0 0" | tee -a ${target}/etc/fstab >&2
 echo "${bypath_disk}-part2 /boot ext2 defaults 0 2" | tee -a ${target}/etc/fstab >&2
 echo "${bypath_disk}-part1 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc/fstab >&2
 echo "done."
