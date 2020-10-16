@@ -354,11 +354,17 @@ echo -n "Mounting disks on temporary target... "
 target=$( mktemp -d )
 mount /dev/vgx/root ${target} >&2
 mkdir -p ${target}/boot >&2
+chattr +i ${target}/boot >&2
 mount ${target_disk}2 ${target}/boot >&2
 mkdir -p ${target}/boot/efi >&2
+chattr +i ${target}/boot/efi >&2
 mount ${target_disk}1 ${target}/boot/efi >&2
 mkdir -p ${target}/var/lib/ceph >&2
+chattr +i ${target}/var/lib/ceph >&2
 mount /dev/vgx/ceph ${target}/var/lib/ceph >&2
+mkdir -p ${target}/tmp >&2
+chattr +i ${target}/tmp >&2
+mount -t tmpfs tmpfs ${target}/tmp >&2
 echo "done."
 
 echo -n "Running debootstrap install... "
