@@ -22,12 +22,11 @@ Follow the prompts carefully; if you make a mistake, you can ^C to cancel the in
 
 ## License
 
-Copyright (C) 2018-2019  Joshua M. Boniface <joshua@boniface.me>
+Copyright (C) 2018-2021  Joshua M. Boniface <joshua@boniface.me>
 
 This repository, and all contained files, is free software: you can
 redistribute it and/or modify it under the terms of the GNU General
-Public License as published by the Free Software Foundation, either
-version 3 of the License, or (at your option) any later version.
+Public License as published by the Free Software Foundation, version 3.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
