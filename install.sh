@@ -198,7 +198,9 @@ echo "done."
 echo
 
 echo "4) Please enter an HTTP URL containing a text list of SSH authorized keys to"
-echo "fetch. These keys will be allowed access to the 'deploy' user via SSH."
+echo "fetch. These keys will be allowed access to the deployment user 'XXDEPLOYUSER'"
+echo "via SSH."
+echo ""
 echo "Leave blank to bypass this and use a password instead."
 echo
 echo -n "> "
@@ -207,7 +209,7 @@ if [[ -z ${target_keys_url} ]]; then
     echo
     echo "No SSH keys URL specified. Falling back to password configuration."
     echo
-    echo "5) Please enter a password (hidden), twice, for the 'deploy' user."
+    echo "5) Please enter a password (hidden), twice, for the deployment user 'XXDEPLOYUSERXX'."
     while [[ -z "${target_password}" ]]; do
         echo
         echo -n "> "
@@ -407,16 +409,16 @@ echo -n "Setting temporary 'root' password... "
 echo "root:${root_password}" | chroot ${target} chpasswd >&2
 echo "done."
 
-echo -n "Adding 'deploy' user... "
+echo -n "Adding deployment user... "
 mv ${target}/home ${target}/var/home >&2
-chroot ${target} useradd -u 200 -d /var/home/deploy -m -s /bin/bash -g operator -G sudo deploy >&2
-chroot ${target} mkdir -p /var/home/deploy/.ssh
+chroot ${target} useradd -u 200 -d /var/home/XXDEPLOYUSERXX -m -s /bin/bash -g operator -G sudo XXDEPLOYUSERXX >&2
+chroot ${target} mkdir -p /var/home/XXDEPLOYUSERXX/.ssh
 if [[ -n ${target_keys_url} ]]; then
-wget -O ${target}/var/home/deploy/.ssh/authorized_keys ${target_keys_url}
-chroot ${target} chmod 0600 /var/home/deploy/.ssh/authorized_keys
-chroot ${target} chown -R deploy:operator /var/home/deploy
+wget -O ${target}/var/home/XXDEPLOYUSERXX/.ssh/authorized_keys ${target_keys_url}
+chroot ${target} chmod 0600 /var/home/XXDEPLOYUSERXX/.ssh/authorized_keys
+chroot ${target} chown -R XXDEPLOYUSERXX:operator /var/home/XXDEPLOYUSERXX
 else
-echo "deploy:${target_password}" | chroot ${target} chpasswd >&2
+echo "XXDEPLOYUSERXX:${target_password}" | chroot ${target} chpasswd >&2
 fi
 echo "done."
 
