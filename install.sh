@@ -57,8 +57,8 @@ disks="$(
 
 echo "2) Please enter the disk to install the PVC base system to. This disk will be"
 echo "wiped, an LVM PV created on it, and the system installed to this LVM."
-echo "NOTE: PVC requires a disk of >16GB to be installed to. 32GB is the recommended"
-echo "minimum size, and disks larger than 64GB are not particularly useful."
+echo "NOTE: PVC requires a disk of at least 64GB to be installed to. 100GB is the"
+echo "recommended minimum size."
 echo "NOTE: This disk should generally be a RAID-1 volume configured in hardware for"
 echo "maximum redundancy and resiliency."
 echo
@@ -260,6 +260,7 @@ cleanup() {
     umount ${target}/dev/pts >&2
     umount ${target}/dev >&2
     umount ${target}/var/lib/ceph >&2
+    umount ${target}/var/lib/zookeeper >&2
     umount ${target}/boot/efi >&2
     umount ${target}/boot >&2
     umount ${target} >&2
@@ -272,26 +273,22 @@ trap cleanup EXIT
 
 echo -n "Determining block device and partition sizing... "
 blockdev_size="$(( $( blockdev --getsize64 ${target_disk} ) / 1024 / 1024 / 1024 - 1))"
-if [[ ${blockdev_size} -ge 58 ]]; then
-    # Sufficiently large system disk (>=64GB), use large partitions
+if [[ ${blockdev_size} -ge 100 ]]; then
+    # Optimal sized system disk (>=100GB), use large partitions
     size_root_lv="32"
-    size_ceph_lv="4"
+    size_ceph_lv="8"
+    size_zookeeper_lv="32"
     size_swap_lv="16"
-    echo "found large disk, using partition sizes 32/4/16."
-elif [[ ${blockdev_size} -ge 28 ]]; then
-    # Relatively large disk (>=32GB), use small partitions
+    echo "found optimal sized disk, using partition sizes 32/8/32/16."
+elif [[ ${blockdev_size} -ge 62 ]]; then
+    # Minimum sized disk (>=64GB), use small partitions
     size_root_lv="16"
-    size_ceph_lv="2"
-    size_swap_lv="8"
-    echo "found medium disk, using partition sizes 16/2/8."
-elif [[ ${blockdev_size} -ge 13 ]]; then
-    # Small disk (>=16GB), use very small partitions
-    size_root_lv="8"
-    size_ceph_lv="2"
-    size_swap_lv="2"
-    echo "found small disk, using partition sizes 8/2/2."
+    size_ceph_lv="4"
+    size_zookeeper_lv="16"
+    size_swap_lv="16"
+    echo "found minimum sized disk, using partition sizes 16/4/16/16."
 else
-    # Extremely small disk, (<16GB) - bail out, this is too small
+    # Extremely small disk, (<64GB) - bail out, this is too small
     echo
     echo "FAILURE - The specified disk is too small (<16GB). PVC must be installed on a disk of >16GB."
     read
@@ -337,6 +334,13 @@ echo -n "Creating filesystem on ceph logical volume (ext4)... "
 mkfs.ext4 /dev/vgx/ceph >&2
 echo "done."
 
+echo -n "Creating zookeeper logical volume (${size_zookeeper_lv}GB)... "
+yes | lvcreate -L ${size_zookeeper_lv}G -n zookeeper vgx >&2
+echo "done."
+echo -n "Creating filesystem on zookeeper logical volume (ext4)... "
+mkfs.ext4 /dev/vgx/zookeeper >&2
+echo "done."
+
 echo -n "Creating swap logical volume (${size_swap_lv}GB)... "
 lvcreate -L ${size_swap_lv}G -n swap vgx >&2
 echo "done."
@@ -364,6 +368,9 @@ mount ${target_disk}1 ${target}/boot/efi >&2
 mkdir -p ${target}/var/lib/ceph >&2
 chattr +i ${target}/var/lib/ceph >&2
 mount /dev/vgx/ceph ${target}/var/lib/ceph >&2
+mkdir -p ${target}/var/lib/zookeeper >&2
+chattr +i ${target}/var/lib/zookeeper >&2
+mount /dev/vgx/zookeeper ${target}/var/lib/zookeeper >&2
 mkdir -p ${target}/tmp >&2
 chattr +i ${target}/tmp >&2
 mount -t tmpfs tmpfs ${target}/tmp >&2
@@ -395,6 +402,7 @@ done
 echo -n "Adding fstab entries... "
 echo "/dev/mapper/vgx-root / ext4 errors=remount-ro 0 1" | tee -a ${target}/etc/fstab >&2
 echo "/dev/mapper/vgx-ceph /var/lib/ceph ext4 errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-zookeeper /var/lib/zookeeper ext4 errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
 echo "/dev/mapper/vgx-swap none swap sw 0 0" | tee -a ${target}/etc/fstab >&2
 echo "${bypath_disk}-part2 /boot ext2 defaults 0 2" | tee -a ${target}/etc/fstab >&2
 echo "${bypath_disk}-part1 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc/fstab >&2
