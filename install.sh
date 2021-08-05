@@ -26,9 +26,9 @@ echo "-----------------------------------------------------"
 echo
 echo "This LiveCD will install a PVC node base system ready for bootstrapping with 'pvc-ansible'."
 echo
-echo "NOTE: If you make a mistake and need to restart the installer while answering"
-echo "      the questions below, you may do so by typing ^C to cancel the script,"
-echo "      then re-running it by calling /install.sh in the resulting shell."
+echo "* NOTE: If you make a mistake and need to restart the installer while answering"
+echo "        the questions below, you may do so by typing ^C to cancel the script,"
+echo "        then re-running it by calling /install.sh in the resulting shell."
 echo
 
 echo "1) Please enter a fully-qualified hostname for the system. This should match the hostname"
@@ -57,10 +57,11 @@ disks="$(
 
 echo "2) Please enter the disk to install the PVC base system to. This disk will be"
 echo "wiped, an LVM PV created on it, and the system installed to this LVM."
-echo "NOTE: PVC requires a disk of at least 64GB to be installed to. 100GB is the"
-echo "recommended minimum size."
-echo "NOTE: This disk should generally be a RAID-1 volume configured in hardware for"
-echo "maximum redundancy and resiliency."
+echo "* NOTE: PVC requires a disk of at least 30GB to be installed to, and 100GB is the"
+echo "recommended minimum size for optimal production partition sizes."
+echo "* NOTE: For optimal performance, this disk should be high-performance flash (SSD, etc.)."
+echo "* NOTE: This disk should be a RAID-1 volume configured in hardware, or a durable storage"
+echo "device, maximum redundancy and resiliency."
 echo
 echo "Available disks:"
 echo
@@ -72,6 +73,13 @@ while [[ ! -b ${target_disk} ]]; do
     if [[ ! -b ${target_disk} ]]; then
         echo
         echo "Please enter a valid target disk."
+        continue
+    fi
+    blockdev_size="$(( $( blockdev --getsize64 ${target_disk} ) / 1024 / 1024 / 1024 - 1))"
+    if [[ ${blockdev_size} -lt 30 ]]; then
+        echo
+        echo "The specified disk is too small (<30 GB) to use as a PVC system disk."
+        echo "Please choose an alternative disk."
         continue
     fi
     echo
@@ -86,7 +94,7 @@ interfaces="$(
 )"
 echo "3a) Please enter the primary network interface for external connectivity. If"
 echo "no entries are shown here, ensure a cable is connected, then restart the"
-echo "installer."
+echo "installer with ^C and '/install.sh'."
 echo
 echo "Available interfaces:"
 echo
@@ -279,20 +287,14 @@ if [[ ${blockdev_size} -ge 100 ]]; then
     size_ceph_lv="8"
     size_zookeeper_lv="32"
     size_swap_lv="16"
-    echo "found optimal sized disk, using partition sizes 32/8/32/16."
-elif [[ ${blockdev_size} -ge 62 ]]; then
-    # Minimum sized disk (>=64GB), use small partitions
-    size_root_lv="16"
+    echo "found large disk (>=100GB), using optimal partition sizes."
+elif [[ ${blockdev_size} -ge 30 ]]; then
+    # Minimum sized disk (>=30GB), use small partitions
+    size_root_lv="8"
     size_ceph_lv="4"
-    size_zookeeper_lv="16"
-    size_swap_lv="16"
-    echo "found minimum sized disk, using partition sizes 16/4/16/16."
-else
-    # Extremely small disk, (<64GB) - bail out, this is too small
-    echo
-    echo "FAILURE - The specified disk is too small (<16GB). PVC must be installed on a disk of >16GB."
-    read
-    exit 1
+    size_zookeeper_lv="8"
+    size_swap_lv="8"
+    echo "found small disk (>=30GB), using small partition sizes."
 fi
 
 echo -n "Disabing existing volume groups... "
