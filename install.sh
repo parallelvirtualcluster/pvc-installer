@@ -6,8 +6,9 @@ if [[ $( whoami ) != "root" ]]; then
 fi
 
 logfile="/tmp/pvc-install.log"
-debrelease="buster"
-debmirror="http://debian.mirror.rafal.ca/debian"
+supported_debrelease="buster bullseye"
+default_debrelease="buster"
+default_debmirror="http://debian.mirror.rafal.ca/debian"
 debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python,python2,python3,ca-certificates,ntp"
 suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x"
 
@@ -205,7 +206,43 @@ esac
 echo "done."
 echo
 
-echo "4) Please enter an HTTP URL containing a text list of SSH authorized keys to"
+echo "4a) Please enter an alternate Debian release codename for the system if desired."
+echo "    Supported: ${supported_debrelease}"
+echo "    Default: ${default_debrelease}"
+while [[ -z ${target_hostname} ]]; do
+    echo
+    echo -n "> "
+    read debrelease
+    if [[ -z ${debrelease} ]]; then
+        debrelease="${default_debrelease}"
+    fi
+    if ! grep "${debrelease}" <<<"${supported_debrelease}"
+        debrelease=""
+        echo
+        echo "Please enter a valid release."
+        continue
+    fi
+    echo
+done
+
+echo "4b) Please enter an HTTP URL for an alternate Debian mirror if desired."
+echo "    Default: ${default_debmirror}"
+while [[ -z ${debmirror} ]]; do
+    echo
+    echo -n "> "
+    read debmirror
+    if [[ -z ${debmirror} ]]; then
+        debmirror="${default_debmirror}"
+    fi
+    if ! wget -O /dev/null ${debmirror}/${debrelease}/Release &>/dev/null; then
+        echo
+        echo "Please enter a valid Debian mirror URL."
+        continue
+    fi
+    echo
+done
+
+echo "5) Please enter an HTTP URL containing a text list of SSH authorized keys to"
 echo "fetch. These keys will be allowed access to the deployment user 'XXDEPLOYUSER'"
 echo "via SSH."
 echo ""
