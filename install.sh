@@ -12,10 +12,6 @@ default_debmirror="http://debian.mirror.rafal.ca/debian"
 debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python2,python3,ca-certificates,ntp"
 suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x"
 
-declare -a debpkglist_release
-debpkglist_release[buster]=",python"
-debpkglist_release[bullseye]=",python-is-python3"
-
 # DANGER - THIS PASSWORD IS PUBLIC
 # It should be used ONLY immediately after booting the PVC node in a SECURE environment
 # to facilitate troubleshooting of a failed boot. It should NOT be exposed to the Internet,
@@ -429,7 +425,6 @@ mount -t tmpfs tmpfs ${target}/tmp >&2
 echo "done."
 
 echo -n "Running debootstrap install... "
-debpkglist+=${debpkglist_release[${debrelease}]}
 debootstrap --include=${debpkglist} ${debrelease} ${target}/ ${debmirror} >&2
 echo "done."
 
