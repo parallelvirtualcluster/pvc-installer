@@ -249,6 +249,8 @@ while [[ -z ${debmirror} ]]; do
         continue
     fi
     echo
+    echo "Repository mirror '${debmirror}' successfully validated."
+    echo
 done
 
 echo "5) Please enter an HTTP URL containing a text list of SSH authorized keys to"
@@ -287,6 +289,8 @@ else
         echo -n "> "
         read target_keys_url
     done
+    echo
+    echo "SSH key source '${target_keys_url}' successfully validated."
 fi
 echo
 
