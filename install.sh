@@ -538,7 +538,7 @@ echo "done."
 
 set +o errexit
 echo
-echo -n "Edit the /etc/network/interfaces file in the target before completing setup? [y/N] "
+echo -n "Edit the /etc/network/interfaces file in the target before completing setup? If you plan to use bonding, it is prudent to set this up in basic form now! [y/N] "
 read edit_ifaces
 if [[ ${edit_ifaces} == 'y' || ${edit_ifaces} == 'Y' ]]; then
     vim ${target}/etc/network/interfaces
@@ -557,7 +557,7 @@ cleanup
 echo "-------------------------------------------------------------------------------------"
 echo "| PVC node installation finished. Next steps:                                       |"
 echo "| 1. Press <enter> to reboot the system.                                            |"
-echo "| 2. Boot the PVC base hypervisor and verify SSH access (IP shown on login screen). |"
+echo "| 2. Boot the system verify SSH access (IP shown on login screen).                  |"
 echo "| 3. Proceed with system deployment via PVC Ansible.                                |"
 echo "|                                                                                   |"
 echo "| The INSECURE temporary root password if the system will not boot is: ${root_password}     |"
