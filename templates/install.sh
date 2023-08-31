@@ -749,6 +749,7 @@ case ${install_option} in
 esac
 
 echo -n "Determining partition sizes... "
+ts=$(date +%s)
 blockdev_size_bytes="$( blockdev --getsize64 ${target_disk} )"
 blockdev_size_gbytes="$(( ${blockdev_size_bytes} / 1024 / 1024 / 1024 - 1))"
 if [[ ${blockdev_size_gbytes} -ge 100 ]]; then
@@ -757,107 +758,164 @@ if [[ ${blockdev_size_gbytes} -ge 100 ]]; then
     size_ceph_lv="8"
     size_zookeeper_lv="32"
     size_swap_lv="16"
-    echo "found large disk (${blockdev_size_gbytes}GB >= 100GB), using optimal partition sizes."
+    te=$(date +%s)
+    echo "found large disk (${blockdev_size_gbytes}GB >= 100GB), using optimal partition sizes. [$((te-ts))s]"
 else
     # Minimum sized disk (>=30GB), use small partitions
     size_root_lv="8"
     size_ceph_lv="4"
     size_zookeeper_lv="8"
     size_swap_lv="8"
-    echo "found small disk (${blockdev_size_gbytes}GB < 100GB), using small partition sizes."
+    te=$(date +%s)
+    echo "found small disk (${blockdev_size_gbytes}GB < 100GB), using small partition sizes. [$((te-ts))s]"
 fi
 
 echo -n "Unmounting potential partitions on target device... "
+ts=$(date +%s)
 for mount in $( mount | grep "${target_disk}" | awk '{ print $3 }' | sort -r ); do
     umount -f ${mount} >&2 || true
 done
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
 
 echo -n "Unmounting potential LVM logical volumes on target device... "
+ts=$(date +%s)
 for vg in $( pvscan | grep "${target_disk}" | awk '{ print $4 }' ); do
     for mount in $( mount | grep "/${vg}" | awk '{ print $3 }' | sort -r ); do
         umount -f ${mount} >&2 || true
     done
 done
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
 
 echo -n "Disabing potential LVM volume groups on target device... "
+ts=$(date +%s)
 for vg in $( pvscan | grep "${target_disk}" | awk '{ print $4 }' ); do
     vgchange -an ${vg} >&2 || true
     sleep 1
     vgchange -an ${vg} >&2 || true
     yes | vgremove -f ${vg} >&2 || true
 done
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
 
 echo -n "Removing existing LVM physical volumes... "
+ts=$(date +%s)
 for pv in $( pvscan | grep "${target_disk}" | awk '{ print $2 }' ); do
     yes | pvremove -f ${pv} >&2 || true
 done
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Wiping partition signatures on '${target_disk}'... "
+ts=$(date +%s)
 wipefs -a ${target_disk} >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Preparing GPT partitions on '${target_disk}'... "
+ts=$(date +%s)
 # New GPT, part 1 32MB BIOS boot, part 2 64MB ESP, part 3 928MB BOOT, part 4 inf LVM PV
 echo -e "o\ny\nn\n1\n\n32M\nEF02\nn\n2\n\n64M\nEF00\nn\n3\n\n928M\n8300\nn\n4\n\n\n8E00\nw\ny\n" | gdisk ${target_disk} >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Rescanning disks... "
+ts=$(date +%s)
 partprobe >&2 || true
 sleep 5
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Creating LVM PV on '${target_disk}4'... "
+ts=$(date +%s)
 yes | pvcreate -ffy ${target_disk}4 >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Creating LVM VG 'vgx'... "
+ts=$(date +%s)
 yes | vgcreate -f vgx ${target_disk}4 >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Creating root logical volume (${size_root_lv}GB)... "
+ts=$(date +%s)
 yes | lvcreate -L ${size_root_lv}G -n root vgx >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 echo -n "Creating filesystem on root logical volume (${filesystem})... "
+ts=$(date +%s)
 yes | mkfs.${filesystem} /dev/vgx/root >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Creating ceph logical volume (${size_ceph_lv}GB)... "
+ts=$(date +%s)
 yes | lvcreate -L ${size_ceph_lv}G -n ceph vgx >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 echo -n "Creating filesystem on ceph logical volume (${filesystem})... "
+ts=$(date +%s)
 yes | mkfs.${filesystem} /dev/vgx/ceph >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Creating zookeeper logical volume (${size_zookeeper_lv}GB)... "
+ts=$(date +%s)
 yes | lvcreate -L ${size_zookeeper_lv}G -n zookeeper vgx >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 echo -n "Creating filesystem on zookeeper logical volume (${filesystem})... "
+ts=$(date +%s)
 yes | mkfs.${filesystem} /dev/vgx/zookeeper >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Creating swap logical volume (${size_swap_lv}GB)... "
+ts=$(date +%s)
 yes | lvcreate -L ${size_swap_lv}G -n swap vgx >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 echo -n "Creating swap space on swap logical volume... "
+ts=$(date +%s)
 yes | mkswap -f /dev/vgx/swap >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Creating filesystem on boot partition (ext2)... "
+ts=$(date +%s)
 yes | mkfs.ext2 ${target_disk}3 >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Creating filesystem on ESP partition (vfat)... "
+ts=$(date +%s)
 yes | mkdosfs -F32 ${target_disk}2 >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
 
+
+echo -n "Mounting disks on temporary target '${target}'... "
+ts=$(date +%s)
 vgchange -ay >&2
 target="/tmp/target"
 mkdir -p ${target} >&2
-echo -n "Mounting disks on temporary target '${target}'... "
 mount /dev/vgx/root ${target} >&2
 mkdir -p ${target}/boot >&2
 chattr +i ${target}/boot >&2
@@ -874,12 +932,17 @@ mount /dev/vgx/zookeeper ${target}/var/lib/zookeeper >&2
 mkdir -p ${target}/tmp >&2
 chattr +i ${target}/tmp >&2
 mount -t tmpfs tmpfs ${target}/tmp >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Running debootstrap install... "
+ts=$(date +%s)
 echo "Command: debootstrap --include=${basepkglist} ${debrelease} ${target}/ ${debmirror}" >&2
 debootstrap --include=${basepkglist} ${debrelease} ${target}/ ${debmirror} >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 case ${debrelease} in
     buster)
@@ -899,15 +962,21 @@ case ${debrelease} in
 esac
 
 echo -n "Adding ${non_free} APT component (firmware, etc.)... "
+ts=$(date +%s)
 mkdir -p ${target}/etc/apt/sources.list.d/ >&2
 echo "deb ${debmirror} ${debrelease} contrib ${non_free}" | tee -a ${target}/etc/apt/sources.list >&2
 chroot ${target} apt-get update >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 
 echo -n "Installing supplemental packages... "
+ts=$(date +%s)
 chroot ${target} apt-get install -y --no-install-recommends $( sed 's/,/ /g' <<<"${suppkglist}" ) >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 # Determine the bypath name of the specified system disk
 for disk in /dev/disk/by-path/*; do
@@ -926,6 +995,7 @@ else
 fi
 
 echo -n "Adding fstab entries... "
+ts=$(date +%s)
 echo "# fstab configuration for PVC hypervisor" | tee ${target}/etc/fstab >&2
 echo "/dev/mapper/vgx-root / ${filesystem} defaults,${extdiscard}errors=remount-ro 0 1" | tee -a ${target}/etc/fstab >&2
 echo "/dev/mapper/vgx-ceph /var/lib/ceph ${filesystem} defaults,${extdiscard}errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
@@ -934,7 +1004,9 @@ echo "/dev/mapper/vgx-swap none swap sw 0 0" | tee -a ${target}/etc/fstab >&2
 echo "${bypath_disk}-part3 /boot ext2 defaults 0 2" | tee -a ${target}/etc/fstab >&2
 echo "${bypath_disk}-part2 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc/fstab >&2
 echo "tmpfs /tmp tmpfs defaults 0 0" | tee -a ${target}/etc/fstab >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 seed_interfaces_segment() {
     # A seed install is always "dhcp-raw" since the provisioner is always a dedicated, access port
@@ -968,6 +1040,7 @@ interactive_interfaces_segment() {
 }
 
 echo -n "Creating bootstrap interface segment... "
+ts=$(date +%s)
 case ${install_option} in
     on)
         seed_interfaces_segment
@@ -976,24 +1049,36 @@ case ${install_option} in
         interactive_interfaces_segment
     ;;
 esac
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Adding bootstrap interface segment... "
+ts=$(date +%s)
 echo -e "${target_interfaces_block}" | tee ${target}/etc/network/interfaces.d/${target_interface} >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 case ${install_option} in
     on)
         echo -n "Creating bond interface segment... "
+        ts=$(date +%s)
         bond_interfaces="$( ip -br link show | grep -E -o '^e[a-z]+[0-9]+[a-z0-9]*' | grep -v "^${target_interface}$" | tr '\n' ' ' )"
         bond_interfaces_block="auto bond0\niface bond0 inet manual\n\tbond-mode 802.3ad\n\tbond-slaves ${bond_interfaces}\n\tpost-up ip link set mtu 9000 dev \$IFACE"
-        echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
         echo -n "Adding bond interface segment... "
+        ts=$(date +%s)
         echo -e "${bond_interfaces_block}" | tee ${target}/etc/network/interfaces.d/bond0 >&2
-        echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
         echo -n "Adding bootstrap interface post-up checkin script... "
+        ts=$(date +%s)
         cat <<EOF | tee ${target}/etc/network/pvcprovisionerd.checkin.sh >&2
 #!/usr/bin/env bash
 target_interface=\${1}
@@ -1025,7 +1110,9 @@ if [[ \${action} == "system-boot_configured" ]]; then
 fi
 EOF
         chmod +x ${target}/etc/network/pvcprovisionerd.checkin.sh
-        echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
     ;;
     *)
         # noop
@@ -1034,10 +1121,14 @@ EOF
 esac
 
 echo -n "Setting temporary 'root' password... "
+ts=$(date +%s)
 echo "root:${root_password}" | chroot ${target} chpasswd >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Adding deployment user... "
+ts=$(date +%s)
 mv ${target}/home ${target}/var/home >&2
 chroot ${target} useradd -u 200 -d /var/home/${target_deploy_user} -m -s /bin/bash -g operator -G sudo ${target_deploy_user} >&2
 chroot ${target} mkdir -p /var/home/${target_deploy_user}/.ssh
@@ -1055,7 +1146,9 @@ if [[ -n ${target_keys_path} ]]; then
 else
     echo "${target_deploy_user}:${target_password}" | chroot ${target} chpasswd >&2
 fi
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 if [[ -n ${failed_keys} ]]; then
     target_password="$( pwgen -s 8 1 )"
     echo "WARNING: Failed to fetch keys; target deploy user SSH keyauth will fail."
@@ -1064,10 +1157,14 @@ if [[ -n ${failed_keys} ]]; then
 fi
 
 echo -n "Setting NOPASSWD for sudo group... "
+ts=$(date +%s)
 sed -i 's/^%sudo\tALL=(ALL:ALL) ALL/%sudo\tALL=(ALL:ALL) NOPASSWD: ALL/' ${target}/etc/sudoers
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Setting /etc/issue generator... "
+ts=$(date +%s)
 mkdir -p ${target}/etc/network/if-up.d >&2
 echo -e "#!/bin/sh
 IP=\"\$( ip -4 addr show dev ${target_interface} | grep inet | awk '{ print \$2 }' | head -1 )\"
@@ -1078,23 +1175,35 @@ Bootstrap interface IP address: \$IP
 
 EOF" | tee ${target}/etc/network/if-up.d/issue-gen >&2
 chmod +x ${target}/etc/network/if-up.d/issue-gen 1>&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Generating host rsa and ed25519 keys... "
+ts=$(date +%s)
 rm ${target}/etc/ssh/ssh_host_*_key* >&2
 chroot ${target} ssh-keygen -t rsa -N "" -f /etc/ssh/ssh_host_rsa_key >&2
 chroot ${target} ssh-keygen -t ed25519 -N "" -f /etc/ssh/ssh_host_ed25519_key >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Setting hostname... "
+ts=$(date +%s)
 echo "${target_hostname}" | tee ${target}/etc/hostname >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Setting resolv.conf... "
+ts=$(date +%s)
 echo "nameserver 8.8.8.8" | tee ${target}/etc/resolv.conf >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Installing GRUB bootloader... "
+ts=$(date +%s)
 mount --bind /dev ${target}/dev >&2
 mount --bind /dev/pts ${target}/dev/pts >&2
 mount --bind /proc ${target}/proc >&2
@@ -1118,14 +1227,19 @@ mount --bind /sys/firmware/efi/efivars ${target}/sys/firmware/efi/efivars
 chroot ${target} grub-install --force --target=${bios_target} ${target_disk} >&2
 chroot ${target} grub-mkconfig -o /boot/grub/grub.cfg >&2
 umount ${target}/sys/firmware/efi/efivars
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 echo -n "Adding module blacklists... "
+ts=$(date +%s)
 for module in ${target_module_blacklist[@]}; do
     echo "blacklist ${module}" >> ${target}/etc/modprobe.d/blacklist.conf
 done
 chroot ${target} update-initramfs -u -k all >&2
-echo "done."
+te=$(date +%s)
+echo "done. [$((te-ts))s]"
+
 
 DONE="y"
 
