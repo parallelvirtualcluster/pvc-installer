@@ -9,8 +9,12 @@ logfile="/tmp/pvc-install.log"
 supported_debrelease="buster bullseye"
 default_debrelease="buster"
 default_debmirror="http://debian.mirror.rafal.ca/debian"
-debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python,python2,python3,ca-certificates,ntp"
+debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python2,python3,ca-certificates,ntp"
 suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x"
+
+declare -a debpkglist_release
+debpkglist_release[buster]=",python"
+debpkglist_release[bullseye]=",python-is-python3"
 
 # DANGER - THIS PASSWORD IS PUBLIC
 # It should be used ONLY immediately after booting the PVC node in a SECURE environment
@@ -225,7 +229,7 @@ while [[ -z ${debrelease} ]]; do
     if [[ -z ${debrelease} ]]; then
         debrelease="${default_debrelease}"
     fi
-    if ! grep "${debrelease}" <<<"${supported_debrelease}"; then
+    if ! grep -qw "${debrelease}" <<<"${supported_debrelease}"; then
         debrelease=""
         echo
         echo "Please enter a valid release."
@@ -425,6 +429,7 @@ mount -t tmpfs tmpfs ${target}/tmp >&2
 echo "done."
 
 echo -n "Running debootstrap install... "
+debpkglist+=${debpkglist_release[${debrelease}]}
 debootstrap --include=${debpkglist} ${debrelease} ${target}/ ${debmirror} >&2
 echo "done."
 
