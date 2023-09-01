@@ -19,7 +19,7 @@ echo
 
 if [[ ${#active_ttys} -gt 1 ]]; then
     if [[ "${active_ttys[@]}" =~ "ttyS" ]]; then
-        if [[ "${this_tty}" =~ "tty[0-9]+" ]]; then
+        if grep -q -E -o "tty[0-9]+" <<<"${this_tty}"; then
             echo "Found more than one TTY and at least one serial TTY!"
             echo -n "If you wish to run the installer on this graphical TTY instead of the serial TTY, press enter within 15 seconds... "
             if ! read -t 15; then
