@@ -57,6 +57,11 @@ for tty in $( echo -e "$( sed 's/ /\n/g' <<<"${active_ttys[@]}" )" | sort ); do
     if grep -q "${tty_type}" <<<"${target_consoles}"; then
         continue
     fi
+
+    if [[ ${tty_type} == "ttyS" ]]; then
+        # Add 115200 baud rate
+        tty="${tty},115200n8"
+    fi
     target_consoles="${target_consoles} console=${tty}"
 done
 
@@ -658,11 +663,11 @@ partprobe >&2 || true
 echo "done."
 
 echo -n "Creating LVM PV... "
-yes | pvcreate -ffy ${target_disk}3 >&2
+yes | pvcreate -ffy ${target_disk}4 >&2
 echo "done."
 
 echo -n "Creating LVM VG 'vgx'... "
-yes | vgcreate vgx ${target_disk}3 >&2
+yes | vgcreate vgx ${target_disk}4 >&2
 echo "done."
 
 echo -n "Creating root logical volume (${size_root_lv}GB)... "
@@ -694,11 +699,11 @@ yes | mkswap -f /dev/vgx/swap >&2
 echo "done."
 
 echo -n "Creating filesystem on boot partition (ext2)... "
-yes | mkfs.ext2 ${target_disk}2 >&2
+yes | mkfs.ext2 ${target_disk}3 >&2
 echo "done."
 
 echo -n "Creating filesystem on ESP partition (vfat)... "
-yes | mkdosfs -F32 ${target_disk}1 >&2
+yes | mkdosfs -F32 ${target_disk}2 >&2
 echo "done."
 
 vgchange -ay >&2
@@ -708,10 +713,10 @@ echo -n "Mounting disks on temporary target '${target}'... "
 mount /dev/vgx/root ${target} >&2
 mkdir -p ${target}/boot >&2
 chattr +i ${target}/boot >&2
-mount ${target_disk}2 ${target}/boot >&2
+mount ${target_disk}3 ${target}/boot >&2
 mkdir -p ${target}/boot/efi >&2
 chattr +i ${target}/boot/efi >&2
-mount ${target_disk}1 ${target}/boot/efi >&2
+mount ${target_disk}2 ${target}/boot/efi >&2
 mkdir -p ${target}/var/lib/ceph >&2
 chattr +i ${target}/var/lib/ceph >&2
 mount /dev/vgx/ceph ${target}/var/lib/ceph >&2
