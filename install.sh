@@ -448,7 +448,7 @@ blockcheck() {
     while [[ ${remainder} -gt 0 && ${exponent} -gt 0 ]]; do
         exponent=$(( ${exponent} - 1 ))
         size=$(( 2**9 * 2 ** ${exponent} ))
-        count=$(( ${blockdev_size_bytes} / ${blocksize} ))
+        count=$(( ${blockdev_size_bytes} / ${size} ))
         remainder=$(( ${blockdev_size_bytes} - ${count} * ${size} ))
     done
     if [[ ${remainder} -gt 0 ]]; then
