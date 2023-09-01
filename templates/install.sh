@@ -56,7 +56,9 @@ supported_debrelease="buster bullseye"
 default_debrelease="buster"
 default_debmirror="http://debian.mirror.rafal.ca/debian"
 
-basepkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
+# Base packages (installed by debootstrap)
+basepkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
+# Supplemental packages (installed in chroot after debootstrap)
 suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp,ipmitool"
 
 # DANGER - THIS PASSWORD IS PUBLIC
@@ -399,6 +401,13 @@ EOF
         echo
     done
 
+    echo "4c) Please enter any additional packages, comma-separated without spaces,"
+    echo "that you require installed in the base system (firmware, etc.). These"
+    echo "must be valid packages or the install will fail!"
+    echo -n "> "
+    read addpkglist
+    echo
+
     target_keys_method="wget"
     echo "5) Please enter an HTTP URL containing a text list of SSH authorized keys to"
     echo "fetch. These keys will be allowed access to the deployment user 'XXDEPLOYUSER'"
@@ -650,11 +659,11 @@ echo "done."
 echo -n "Adding non-free repository (firmware, etc.)... "
 mkdir -p ${target}/etc/apt/sources.list.d/ >&2
 echo "deb ${debmirror} ${debrelease} contrib non-free" | tee -a ${target}/etc/apt/sources.list >&2
-chroot ${target} apt update >&2
+chroot ${target} apt-get update >&2
 echo "done."
 
 echo -n "Installing supplemental packages... "
-chroot ${target} apt install -y --no-install-recommends $( sed 's/,/ /g' <<<"${suppkglist}" ) >&2
+chroot ${target} apt-get install -y --no-install-recommends $( sed 's/,/ /g' <<<"${suppkglist}" ) >&2
 echo "done."
 
 # Determine the bypath name of the specified system disk
