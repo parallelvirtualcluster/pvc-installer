@@ -800,10 +800,18 @@ for disk in /dev/disk/by-path/*; do
     fi
 done
 
+# Check if TRIM is supported on the root disk
+if hdparm -I ${target_disk} | grep --silent "TRIM supported"; then
+    extdiscard="discard,"
+else
+    extdiscard=""
+fi
+
 echo -n "Adding fstab entries... "
-echo "/dev/mapper/vgx-root / ${filesystem} errors=remount-ro 0 1" | tee -a ${target}/etc/fstab >&2
-echo "/dev/mapper/vgx-ceph /var/lib/ceph ${filesystem} errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
-echo "/dev/mapper/vgx-zookeeper /var/lib/zookeeper ${filesystem} errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
+echo "# fstab configuration for PVC hypervisor" | tee ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-root / ${filesystem} defaults,${extdiscard}errors=remount-ro 0 1" | tee -a ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-ceph /var/lib/ceph ${filesystem} defaults,${extdiscard}errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-zookeeper /var/lib/zookeeper ${filesystem} defaults,${extdiscard}errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
 echo "/dev/mapper/vgx-swap none swap sw 0 0" | tee -a ${target}/etc/fstab >&2
 echo "${bypath_disk}-part3 /boot ext2 defaults 0 2" | tee -a ${target}/etc/fstab >&2
 echo "${bypath_disk}-part2 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc/fstab >&2
