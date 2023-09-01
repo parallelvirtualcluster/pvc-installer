@@ -178,6 +178,7 @@ echo "done."
 
 # Install module initramfs requirements (Broadcom NICs)
 echo -n "Copying initramfs modules template... "
+mkdir -p config/includes.chroot/etc/initramfs-tools
 cp ../../templates/modules config/includes.chroot/etc/initramfs-tools/modules || fail "Failed to copy critical template file"
 echo "done."
 
