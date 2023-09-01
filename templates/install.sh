@@ -378,7 +378,7 @@ interactive_config() {
         if [[ -z ${filesystem} ]]; then
             filesystem="${default_filesystem}"
         fi
-        if ! grep -qw "${filesystem}" <<<"${supported_filesystem}"; then
+        if ! grep -qw "${filesystem}" <<<"${supported_filesystems}"; then
             filesystem=""
             echo
             echo "Please enter a valid filesystem."
