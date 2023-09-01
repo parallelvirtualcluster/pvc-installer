@@ -108,14 +108,18 @@ build_iso() {
     popd &>/dev/null
     echo "done."
 
-    echo -n "Moving generated ISO to '$(pwd)/pvc-installer.iso'... "
-    mv ${tempdir}/pvc-installer.iso pvc-installer.iso &>/dev/null || fail "Error moving ISO file."
+    echo -n "Moving generated ISO to './pvc-installer.iso'... "
+    mv ${tempdir}/pvc-installer.iso ../pvc-installer.iso &>/dev/null || fail "Error moving ISO file."
     echo "done."
 }
+
+pushd artifacts/
 
 prepare_iso
 prepare_rootfs
 build_iso
 cleanup
+
+popd
 
 echo "PVC Live Installer ISO generation complete."
