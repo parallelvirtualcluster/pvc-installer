@@ -1,5 +1,5 @@
 title-text: ""
-desktop-image: "/splash.png"
+desktop-image: "/boot/grub/splash.png"
 terminal-width: "800"
 terminal-height: "600"
 + boot_menu {

@@ -163,11 +163,11 @@ cp ../../templates/serial-getty-override.conf config/includes.chroot/etc/systemd
 echo "done."
 
 # Install GRUB config, theme, and splash
-echo -n "Copying GRUB templates... "
-mkdir -p config/includes.chroot/boot/grub
-cp ../../templates/grub.cfg config/includes.chroot/boot/grub/grub.cfg || fail "Failed to copy critical template file"
-cp ../../templates/theme.txt config/includes.chroot/boot/grub/theme.txt || fail "Failed to copy critical template file"
-cp ../../templates/splash.png config/includes.chroot/splash.png || fail "Failed to copy critical template file"
+echo -n "Copying bootloader (GRUB) templates... "
+cp -a /usr/share/live/build/bootloaders/grub-pc config/bootloaders/ || fail "Failed to copy grub-pc bootloader config from host system"
+cp ../../templates/grub.cfg config/bootloaders/grub-pc/grub.cfg || fail "Failed to copy critical template file"
+cp ../../templates/theme.txt config/bootloaders/grub-pc/live-theme/theme.txt || fail "Failed to copy critical template file"
+cp ../../templates/splash.png config/bootloaders/grub-pc/splash.png || fail "Failed to copy critical template file"
 echo "done."
 
 # Install module blacklist template
