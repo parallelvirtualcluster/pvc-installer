@@ -67,18 +67,21 @@ fail() {
 
 prepare_iso() {
     echo -n "Creating temporary directories... "
+    if [[ ! -d artifacts ]]; then
+        mkdir artifacts &>/dev/null || fail "Error creating artifacts directory."
+    fi
     mkdir ${tempdir}/rootfs/ ${tempdir}/installer/ &>/dev/null || fail "Error creating temporary directories."
     echo "done."
 
     if [[ ! -f ${srcliveisofile} ]]; then
         echo -n "Downloading Debian Live ISO... "
-        wget -O ${srcliveisofile} ${srcliveisourl} &>/dev/null || fail "Error downloading source ISO."
+        wget -O artifacts/${srcliveisofile} ${srcliveisourl} &>/dev/null || fail "Error downloading source ISO."
         echo "done."
     fi
 
     echo -n "Extracting Debian Live ISO files... "
     iso_tempdir=$( mktemp -d )
-    sudo mount ${srcliveisofile} ${iso_tempdir} &>/dev/null || fail "Error mounting Live ISO file."
+    sudo mount artifacts/${srcliveisofile} ${iso_tempdir} &>/dev/null || fail "Error mounting Live ISO file."
 	sudo rsync -au --exclude live/filesystem.squashfs ${iso_tempdir}/ ${tempdir}/installer/ &>/dev/null || fail "Error extracting Live ISO files."
     sudo umount ${iso_tempdir} &>/dev/null || fail "Error unmounting Live ISO file."
     rmdir ${iso_tempdir} &>/dev/null
@@ -88,22 +91,22 @@ prepare_iso() {
 prepare_rootfs() {
     echo -n "Preparing Debian live installation via debootstrap... "
     SQUASHFS_PKGLIST="mdadm,lvm2,parted,gdisk,debootstrap,grub-pc,linux-image-amd64,sipcalc,live-boot,dosfstools"
-    test -d debootstrap/ || \
-    sudo /usr/sbin/debootstrap \
-        --include=${SQUASHFS_PKGLIST} \
-        buster \
-        debootstrap/ \
-        http://localhost:3142/ftp.ca.debian.org/debian &>/dev/null || fail "Error performing debootstrap."
-    sudo chroot debootstrap/ apt clean &>/dev/null || fail "Error cleaning apt cache in debootstrap."
-    sudo rsync -au debootstrap/ ${tempdir}/rootfs/ &>/dev/null || fail "Error copying debootstrap to tempdir."
+    if [[ ! -d artifacts/debootstrap ]]; then
+        sudo /usr/sbin/debootstrap \
+            --include=${SQUASHFS_PKGLIST} \
+            buster \
+            artifacts/debootstrap/ \
+            http://localhost:3142/ftp.ca.debian.org/debian &>/dev/null || fail "Error performing debootstrap."
+            sudo chroot artifacts/debootstrap/ apt clean &>/dev/null || fail "Error cleaning apt cache in debootstrap."
+    fi
+    sudo rsync -au artifacts/debootstrap/ ${tempdir}/rootfs/ &>/dev/null || fail "Error copying debootstrap to tempdir."
     echo "done."
    
     echo -n "Configuring Debian live installation... "
-    sudo cp -a debootstrap/boot/vmlinuz* ${tempdir}/installer/live/vmlinuz &>/dev/null || fail "Error copying kernel."
-    sudo cp -a debootstrap/boot/initrd.img* ${tempdir}/installer/live/initrd.img &>/dev/null || fail "Error copying initrd."
+    sudo cp -a artifacts/debootstrap/boot/vmlinuz* ${tempdir}/installer/live/vmlinuz &>/dev/null || fail "Error copying kernel."
+    sudo cp -a artifacts/debootstrap/boot/initrd.img* ${tempdir}/installer/live/initrd.img &>/dev/null || fail "Error copying initrd."
     sudo cp ${tempdir}/rootfs/lib/systemd/system/getty\@.service ${tempdir}/rootfs/etc/systemd/system/getty@tty1.service &>/dev/null || fail "Error copying getty override to tempdir."
-    sudo sed -i \
-        's|/sbin/agetty|/sbin/agetty --autologin root|g' \
+    sudo sed -i 's|/sbin/agetty|/sbin/agetty --autologin root|g' \
          ${tempdir}/rootfs/etc/systemd/system/getty@tty1.service &>/dev/null || fail "Error setting autologin in getty override."
     sudo tee ${tempdir}/rootfs/etc/hostname <<<"pvc-node-installer" &>/dev/null || fail "Error setting hostname."
     sudo tee -a ${tempdir}/rootfs/root/.bashrc <<<"/install.sh" &>/dev/null || fail "Error setting bashrc."
@@ -112,10 +115,10 @@ prepare_rootfs() {
     echo "done."
     
     echo -n "Generating squashfs image of live installation... "
-    if [[ ! -f filesystem.squashfs ]]; then
-        sudo nice mksquashfs ${tempdir}/rootfs/ filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
+    if [[ ! -f artifacts/filesystem.squashfs ]]; then
+        sudo nice mksquashfs ${tempdir}/rootfs/ artifacts/filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
     fi
-    sudo cp filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
+    sudo cp artifacts/filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
     echo "done."
 }
 
@@ -145,18 +148,13 @@ build_iso() {
     echo "done."
 
     echo -n "Moving generated ISO to './${isofilename}'... "
-    mv ${tempdir}/${isofilename} ../${isofilename} &>/dev/null || fail "Error moving ISO file."
+    mv ${tempdir}/${isofilename} ${isofilename} &>/dev/null || fail "Error moving ISO file."
     echo "done."
 }
-
-[[ -d artifacts ]] || mkdir artifacts &>/dev/null | fail "Error creating artifacts directory."
-pushd artifacts &>/dev/null
 
 prepare_iso
 prepare_rootfs
 build_iso
 cleanup
-
-popd &>/dev/null
 
 echo "PVC Live Installer ISO generation complete."
