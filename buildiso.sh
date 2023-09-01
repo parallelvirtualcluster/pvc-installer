@@ -115,7 +115,7 @@ echo "Initializing config..."
 # Initialize the live-build config
 lb config \
        --distribution bookworm \
-       --archive-areas "main contrib non-free" \
+       --archive-areas "main contrib non-free-firmware" \
        --mirror-bootstrap "${mirror_server}/debian" \
        --mirror-chroot-security "${mirror_server}/debian-security" \
        --apt-recommends false \
