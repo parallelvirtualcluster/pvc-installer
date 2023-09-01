@@ -375,6 +375,11 @@ case ${install_option} in
     ;;
 esac
 
+if [[ -f /tmp/pvc-install.lock ]]; then
+    echo "An instance of 'install.sh' is already running!"
+    exit 1
+fi
+touch /tmp/pvc-install.lock
 
 titlestring_text="| Proceeding with installation of host '${target_hostname}'. |"
 titlestring_len="$(( $( wc -c <<<"${titlestring_text}" ) - 2 ))"
@@ -407,6 +412,7 @@ cleanup() {
     umount ${target} >&2
     vgchange -an >&2
     rmdir ${target} >&2
+    rm /tmp/pvc-install.lock
     echo "done."
     echo
 }
