@@ -109,12 +109,14 @@ prepare_rootfs() {
     echo -n "Preparing Debian live installation via debootstrap... "
     SQUASHFS_PKGLIST="mdadm,lvm2,parted,gdisk,debootstrap,grub-pc,grub-efi-amd64,linux-image-amd64,sipcalc,live-boot,dosfstools,vim,ca-certificates"
     if [[ ! -d artifacts/debootstrap ]]; then
+        sudo mkdir -p artifacts/debootstrap/var/cache/apt/archives &>/dev/null
+        sudo mount --bind /var/cache/apt/archives artifacts/debootstrap/var/cache/apt/archives &>/dev/null
         sudo /usr/sbin/debootstrap \
             --include=${SQUASHFS_PKGLIST} \
             buster \
             artifacts/debootstrap/ \
             http://ftp.ca.debian.org/debian &>debootstrap.log || fail "Error performing debootstrap."
-            sudo chroot artifacts/debootstrap/ apt clean &>/dev/null || fail "Error cleaning apt cache in debootstrap."
+        sudo umount artifacts/debootstrap/var/cache/apt/archives &>/dev/null
     fi
     sudo rsync -au artifacts/debootstrap/ ${tempdir}/rootfs/ &>/dev/null || fail "Error copying debootstrap to tempdir."
     echo "done."
