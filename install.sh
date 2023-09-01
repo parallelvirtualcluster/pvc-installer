@@ -12,16 +12,19 @@ debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,
 
 clear
 
-echo "------------------------------------------------"
-echo "| Preparing to install a PVC node base system. |"
-echo "------------------------------------------------"
+echo "-----------------------------------------------------"
+echo "| PVC Node installer (XXISOXX) |"
+echo "-----------------------------------------------------"
+echo
+echo "This LiveCD will install a PVC node base system ready for bootstrapping with 'pvc-ansible'."
 echo
 echo "NOTE: If you make a mistake and need to restart the installer while answering"
 echo "      the questions below, you may do so by typing ^C to cancel the script,"
 echo "      then re-running it by calling /install.sh in the resulting shell."
 echo
 
-echo "1) Please enter a fully-qualified hostname for the system."
+echo "1) Please enter a fully-qualified hostname for the system. This should match the hostname"
+echo "in the 'pvc-ansible' inventory."
 while [[ -z ${target_hostname} ]]; do
     echo
     echo -n "> "
@@ -46,7 +49,8 @@ disks="$(
 
 echo "2) Please enter the disk to install the PVC base system to. This disk will be"
 echo "wiped, an LVM PV created on it, and the system installed to this LVM."
-echo "NOTE: PVC requires a disk of >16GB to be installed to. 32GB is the recommended minimum."
+echo "NOTE: PVC requires a disk of >16GB to be installed to. 32GB is the recommended"
+echo "minimum size, and disks larger than 64GB are not particularly useful."
 echo
 echo "Available disks:"
 echo
@@ -71,8 +75,8 @@ interfaces="$(
     ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2"\t"$3 }' | tr -d ':'
 )"
 echo "3a) Please enter the primary network interface for external connectivity. If"
-echo "    no entries are shown here, ensure a cable is connected, then restart the"
-echo "    installer."
+echo "no entries are shown here, ensure a cable is connected, then restart the"
+echo "installer."
 echo
 echo "Available interfaces:"
 echo

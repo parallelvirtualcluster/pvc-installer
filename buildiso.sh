@@ -27,7 +27,7 @@ srcliveisofilename="$( wget -O- ${srcliveisopath}/ | grep 'debian-live-.*-amd64-
 srcliveisourl="${srcliveisopath}/${srcliveisofilename}"
 
 show_help() {
-	echo -e "PVC install ISO generator"
+    echo -e "PVC install ISO generator"
     echo
     echo -e " Generates a mostly-automated installer ISO for a PVC node base system. The ISO"
     echo -e " boots, then runs 'install.sh' to perform the installation to a target server."
@@ -54,11 +54,11 @@ while getopts "h?o:s:a" opt; do
             exit 0
         ;;
         o)
-        	isofilename=$OPTARG
+            isofilename=$OPTARG
         ;;
-		s)
-			srcliveisourl=$OPTARG
-		;;
+        s)
+            srcliveisourl=$OPTARG
+        ;;
         a)
             usecachedsquashfs='y'
         ;;
@@ -99,7 +99,7 @@ prepare_iso() {
     echo -n "Extracting Debian Live ISO files... "
     iso_tempdir=$( mktemp -d )
     sudo mount artifacts/${srcliveisofile} ${iso_tempdir} &>/dev/null || fail "Error mounting Live ISO file."
-	sudo rsync -au --exclude live/filesystem.squashfs ${iso_tempdir}/ ${tempdir}/installer/ &>/dev/null || fail "Error extracting Live ISO files."
+    sudo rsync -au --exclude live/filesystem.squashfs ${iso_tempdir}/ ${tempdir}/installer/ &>/dev/null || fail "Error extracting Live ISO files."
     sudo umount ${iso_tempdir} &>/dev/null || fail "Error unmounting Live ISO file."
     rmdir ${iso_tempdir} &>/dev/null
     echo "done."
@@ -129,7 +129,8 @@ prepare_rootfs() {
     sudo tee ${tempdir}/rootfs/etc/resolv.conf <<<"nameserver 8.8.8.8" &>/dev/null || fail "Error setting resolv.conf"
     sudo tee -a ${tempdir}/rootfs/root/.bashrc <<<"/install.sh" &>/dev/null || fail "Error setting bashrc."
     sudo chroot ${tempdir}/rootfs/ /usr/bin/passwd -d root &>/dev/null || fail "Error disabling root password."
-	sudo cp install.sh ${tempdir}/rootfs/ &>/dev/null || fail "Error copying install.sh to tempdir."
+    sudo cp install.sh ${tempdir}/rootfs/ &>/dev/null || fail "Error copying install.sh to tempdir."
+    sudo sed -i "s/XXISOXX/${isofilename}/g" ${tempdir}/rootfs/install.sh &>/dev/null || fail "Error editing install.sh script."
     echo "done."
     
     echo -n "Generating squashfs image of live installation... "
