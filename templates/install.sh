@@ -148,7 +148,7 @@ seed_checkin() (
     curl -X POST \
         -H "Content-Type: application/json" \
         -d "{\"action\":\"${action}\",\"macaddr\":\"${macaddr}\",\"ipaddr\":\"${ipaddr}\",\"hostname\":\"${target_hostname}\",\"bmc_macaddr\":\"${bmc_macaddr}\",\"bmc_ipaddr\":\"${bmc_ipaddr}\"}" \
-        ${pvcbootstrapd_checkin_uri}
+        ${pvcbootstrapd_checkin_uri} >&2
 )
 
 # Obtain the preseed options from the kernel command line
