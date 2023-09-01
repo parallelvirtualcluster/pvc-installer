@@ -1,6 +1,8 @@
-# PVC Live Installer
+# PVC Live Node Installer
 
-This repository contains the generator and configurations for the PVC Live Installer ISO. This ISO provides a quick and convenient way to install a PVC base system to a physical server, ready to then be provisioned using the [`pvc-ansible`](https://git.bonifacelabs.ca/parallelvirtualcluster/pvc-ansible) configuration framework.
+**NOTICE FOR GITHUB**: This repository is a read-only mirror of the PVC repositories from my personal GitLab instance. Pull requests submitted here will not be merged. Issues submitted here will however be treated as authoritative.
+
+This repository contains the generator and configurations for the PVC Live Node Installer ISO. This ISO provides a quick and convenient way to install a PVC base system to a physical server, ready to then be provisioned using the [PVC Ansible](https://github.com/parallelvirtualcluster/pvc-ansible) configuration framework. Part of the [Parallel Virtual Cluster system](https://github.com/parallelvirtualcluster/pvc).
 
 ## Using
 
@@ -14,7 +16,7 @@ The built ISO can be booted in either BIOS (traditional ISOLinux) or UEFI (Grub2
 
 ## Installing
 
-The installer script will ask several questions to configure the bare minimum system needed for [`pvc-ansible`](https://git.bonifacelabs.ca/parallelvirtualcluster/pvc-ansible) to configure the node.
+The installer script will ask several questions to configure the bare minimum system needed for [`pvc-ansible`](https://github.com/parallelvirtualcluster/pvc-ansible) to configure the node.
 
 Follow the prompts carefully; if you make a mistake, you can ^C to cancel the installer, then re-run via `/install.sh` from the resulting root shell.
 
