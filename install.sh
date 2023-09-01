@@ -213,7 +213,7 @@ echo -e "o\ny\nn\n1\n\n64M\nEF00\nn\n2\n\n960M\n8300\nn\n3\n\n\n8E00\nw\ny\n" | 
 echo "done."
 
 echo -n "Rescanning disks... "
-partprobe >&2
+partprobe >&2 || true
 echo "done."
 
 echo -n "Creating LVM PV... "
