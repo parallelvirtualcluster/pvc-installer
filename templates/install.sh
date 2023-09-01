@@ -631,13 +631,13 @@ for vg in $( pvscan | grep "${target_disk}" | awk '{ print $4 }' ); do
     vgchange -an ${vg} >&2 || true
     sleep 1
     vgchange -an ${vg} >&2 || true
-    yes | vgremove -f ${vg} || true
+    yes | vgremove -f ${vg} >&2 || true
 done
 echo "done."
 
 echo -n "Removing existing LVM physical volumes... "
 for pv in $( pvscan | grep "${target_disk}" | awk '{ print $2 }' ); do
-    yes | pvremove -f ${pv} || true
+    yes | pvremove -f ${pv} >&2 || true
 done
 echo "done."
 
