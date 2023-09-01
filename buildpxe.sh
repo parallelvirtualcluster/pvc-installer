@@ -114,7 +114,7 @@ build_pxe() {
     popd &>/dev/null
     echo "done."
 
-    echo -n "Downloading iPXE binary undionly.kpxe (chainloads UEFI clients)... "
+    echo -n "Downloading iPXE binary ipxe.efi (chainloads UEFI clients)... "
     pushd ${outputdir} &>/dev/null
     wget -O ipxe.efi https://boot.ipxe.org/ipxe.efi &>/dev/null || fail "failed to download ipxe.efi."
     popd &>/dev/null
