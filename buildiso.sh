@@ -12,10 +12,14 @@ fail() {
     exit 1
 }
 
-which debootstrap &>/dev/null || fail "This script requires debootstrap."
-which mksquashfs &>/dev/null || fail "This script requires squashfs-tools."
-which xorriso &>/dev/null || fail "This script requires xorriso."
-test -f /usr/lib/ISOLINUX/isohdpfx.bin &>/dev/null || fail "This script requires isolinux."
+fail=""
+which debootstrap &>/dev/null || fail="y"
+which mksquashfs &>/dev/null || fail="y"
+which xorriso &>/dev/null || fail="y"
+test -f /usr/lib/ISOLINUX/isohdpfx.bin &>/dev/null || fail="y"
+if [[ -n ${fail} ]]; then
+    fail "This script requires debootstrap, xorriso, squashfs-tools, and isolinux"
+fi
 
 isofilename="pvc-installer_$(date +%Y-%m-%d).iso"
 srcliveisopath="https://cdimage.debian.org/mirror/cdimage/release/current-live/amd64/iso-hybrid"
