@@ -31,9 +31,11 @@ show_help() {
     echo -e "   -o: Create the ISO as <output_filename> instead of the default."
     echo -e "   -s: Obtain the source Debian Live ISO from <liveiso_source_url> instead of"
     echo -e "       the default."
+    echo -e "   -i: Ignore cached squashfs artifact during rebuild (ISO and debootstrap"
+    echo -e "       artifacts are never ignored)."
 }
 
-while getopts "h?o:s:" opt; do
+while getopts "h?o:s:i" opt; do
     case "$opt" in
         h|\?)
             show_help
@@ -45,6 +47,9 @@ while getopts "h?o:s:" opt; do
 		s)
 			srcliveisourl=$OPTARG
 		;;
+        i)
+            ignorecachedsquashfs='y'
+        ;;
     esac
 done
 
@@ -115,7 +120,7 @@ prepare_rootfs() {
     echo "done."
     
     echo -n "Generating squashfs image of live installation... "
-    if [[ ! -f artifacts/filesystem.squashfs ]]; then
+    if [[ ! -f artifacts/filesystem.squashfs && -n ${ignorecachedsquashfs} ]]; then
         sudo nice mksquashfs ${tempdir}/rootfs/ artifacts/filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
     fi
     sudo cp artifacts/filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
