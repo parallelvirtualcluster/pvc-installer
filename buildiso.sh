@@ -122,6 +122,12 @@ cp ../../templates/theme.txt config/includes.chroot/boot/grub/theme.txt || fail 
 cp ../../templates/splash.png config/includes.chroot/splash.png || fail "Failed to copy critical template file"
 echo "done."
 
+# Install module blacklist template
+echo -n "Copying module blacklist template... "
+mkdir -p config/includes.chroot/etc/modprobe.d
+cp ../../templates/blacklist.conf config/includes.chroot/etc/modprobe.d/blacklist.conf || fail "Failed to copy critical template file"
+echo "done."
+
 # Install install.sh script
 echo -n "Copying PVC node installer script template... "
 cp ../../templates/install.sh config/includes.chroot/install.sh || fail "Failed to copy critical template file"

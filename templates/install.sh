@@ -869,7 +869,6 @@ EOF
         true
     ;;
 esac
-echo "done."
 
 echo -n "Setting temporary 'root' password... "
 echo "root:${root_password}" | chroot ${target} chpasswd >&2
