@@ -35,13 +35,6 @@ install_option="$( awk '{
 
 seed_config() {
     echo "Hello ${1}"
-    seed_vlan="$( awk '{
-        for(i=1; i<=NF; i++) {
-            if($i ~ /pvcinstall.seed_vlan=/) {
-                print $i;
-            }
-        }
-    }' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
     seed_host="$( awk '{
         for(i=1; i<=NF; i++) {
             if($i ~ /pvcinstall.seed_host=/) {
@@ -57,29 +50,20 @@ seed_config() {
         }
     }' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
 
-    if [[ -n ${seed_vlan} ]]; then
-        modprobe 8021q
-    fi
-
     # Perform DHCP on all interfaces to come online
     for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
         ip link set ${interface} up
-        if [[ -n ${seed_vlan} ]]; then
-            vconfig add ${interface} ${seed_vlan}
-            dhclient ${interface}.${seed_vlan}
-        else
-            dhclient ${interface}
-        fi
+        dhclient ${interface}
     done
 
     # Fetch the seed config
     tftp -m binary "${seed_host}" -c get "${seed_file}" /tmp/install.seed
 
-    . /tmp/install.seed
+    . /tmp/install.seed || exit 1
 
     # Handle the target disk
     if [[ -n ${target_disk_path} ]]; then
-        target_disk="$( readlink ${target_disk_path} )"
+        target_disk="$( realpath ${target_disk_path} )"
         if [[ ! -b ${target_disk} ]]; then
             echo "Invalid disk!"
             exit 1
@@ -99,9 +83,9 @@ seed_config() {
 interactive_config() {
     clear
     
-    echo "-----------------------------------------------------"
+    echo "--------------------------------------------------------"
     echo "| PVC Node installer (${iso_name}) |"
-    echo "-----------------------------------------------------"
+    echo "--------------------------------------------------------"
     echo
     echo "This LiveCD will install a PVC node base system ready for bootstrapping with 'pvc-ansible'."
     echo
@@ -383,7 +367,7 @@ EOF
 }    
 
 case ${install_option} in
-    seed)
+    on)
         seed_config
     ;;
     *)
@@ -542,7 +526,7 @@ echo "done."
 
 # Determine the bypath name of the specified system disk
 for disk in /dev/disk/by-path/*; do
-    bypathlink="$( readlink ${disk} | awk -F'/' '{ print $NF }' )"
+    bypathlink="$( realpath ${disk} | awk -F'/' '{ print $NF }' )"
     enteredname="$( awk -F'/' '{ print $NF }' <<<"${target_disk}" )"
     if [[ ${bypathlink} == ${enteredname} ]]; then
         bypath_disk="${disk}"

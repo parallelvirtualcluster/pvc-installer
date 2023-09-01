@@ -116,16 +116,14 @@ build_pxe() {
 set root-url tftp://\${next-server}
 set host-url tftp://\${next-server}/host
 
-# Load host/mac-*.ipxe if present (per-host host-args configuration)
-chain --autofree \${host-url}/mac-\${mac:hexraw}.ipxe ||
-
 set menu-default pvc-installer
 set submenu-default pvc-installer
 
 :pvc-installer
 kernel \${root-url}/vmlinuz
 initrd \${root-url}/initrd.img
-imgargs vmlinuz console=tty0 console=ttyS0,115200n8 boot=live components timezone=America/Toronto fetch=\${root-url}/filesystem.squashfs username=root \${host-args}
+imgargs vmlinuz console=tty0 console=ttyS0,115200n8 boot=live components timezone=America/Toronto fetch=\${root-url}/filesystem.squashfs username=root pvcinstall.preseed=on pvcinstall.seed_host=\${next-server} pvcinstall.seed_file=/host/mac-\${mac:hexraw}.preseed
+
 boot
 EOF
     echo "done."
