@@ -18,9 +18,6 @@ sudo -n true &>/dev/null || fail "The user running this script must have sudo pr
 idir=$( dirname $0 )
 pushd ${idir} &>/dev/null
 
-isofilename="pvc-installer_$(date +%Y-%m-%d).iso"
-deployusername="deploy"
-
 show_help() {
     echo -e "PVC install ISO generator"
     echo
@@ -31,6 +28,7 @@ show_help() {
     echo -e "   -h: Display this help message."
     echo -e "   -o: Create the ISO as <output_filename> instead of the default."
     echo -e "   -u: Change 'deploy' user to a new username."
+    echo -e "   -c: Change CPU architecture to a new architecture [x86_64/aarch64]."
     echo -e "   -a: Preserve live-build artifacts."
     echo -e "   -k: Preserve live-build config."
 }
@@ -47,6 +45,28 @@ while [ $# -gt 0 ]; do
         ;;
         -u)
             deployusername="${2}"
+            shift 2
+        ;;
+        -c)
+            current_arch=$( uname -m )
+            if [[ ${current_arch} != ${2} ]]; then
+                case ${2} in
+                    x86_64)
+                        arch="amd64"
+                        arch_config_append="--architecture amd64 --bootloader grub-efi --bootstrap-qemu-arch amd64 --bootstrap-qemu-static /usr/bin/qemu-x86_64-static"
+                    ;;
+                    aarch64)
+                        arch="arm64"
+                        arch_config_append="--architecture arm64 --bootloader grub-efi --bootstrap-qemu-arch arm64 --bootstrap-qemu-static /usr/bin/qemu-aarch64-static"
+                    ;;
+                    *)
+                        echo "Invalid arch: ${2}"
+                        echo
+                        show_help
+                        exit 1
+                    ;;
+                esac  
+            fi
             shift 2
         ;;
         -a)
@@ -66,6 +86,16 @@ while [ $# -gt 0 ]; do
     esac
 done
 
+if [[ -z ${arch} ]]; then
+    arch="amd64"
+fi
+if [[ -z ${isofilename} ]]; then
+    isofilename="pvc-installer_$(date +%Y-%m-%d)_${arch}.iso"
+fi
+if [[ -z ${deployusername} ]]; then
+    deployusername="deploy"
+fi
+
 mkdir -p artifacts/lb
 pushd artifacts/lb &>/dev/null
 
@@ -75,12 +105,13 @@ echo
 
 echo "Initializing config..."
 # Initialize the live-build config
-lb config --distribution buster --architectures amd64 --archive-areas "main contrib non-free" --apt-recommends false || fail "Failed to initialize live-build config"
+lb config --distribution bullseye --archive-areas "main contrib non-free" --apt-recommends false ${arch_config_append} || fail "Failed to initialize live-build config"
 echo
 
 # Configure the package lists
 echo -n "Copying package lists... "
 cp ../../templates/installer.list.chroot config/package-lists/installer.list.chroot || fail "Failed to copy critical template file"
+cp ../../templates/installer_${arch}.list.chroot config/package-lists/installer_${arch}.list.chroot || fail "Failed to copy critical template file"
 cp ../../templates/firmware.list.chroot config/package-lists/firmware.list.chroot || fail "Failed to copy critical template file"
 echo "done."
 
@@ -151,7 +182,7 @@ echo
 
 # Move the ISO image out
 echo -n "Copying generated ISO to repository root... "
-cp live-image-amd64.hybrid.iso ../../${isofilename}
+cp live-image-${arch}.hybrid.iso ../../${isofilename}
 echo "done."
 
 # Clean up the artifacts

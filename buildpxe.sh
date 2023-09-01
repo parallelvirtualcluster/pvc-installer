@@ -86,6 +86,7 @@ build_iso() {
         ./buildiso.sh \
             -o pvc-installer_pxe-tmp.iso \
             -u ${deployusername} \
+            -c x86_64 \
             ${preserve_artifacts} \
             ${preserve_livebuild} || fail "Failed to build ISO."
         echo

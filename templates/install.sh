@@ -76,7 +76,15 @@ default_debrelease="buster"
 default_debmirror="http://debian.mirror.rafal.ca/debian"
 
 # Base packages (installed by debootstrap)
-basepkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
+basepkglist="lvm2,parted,gdisk,sudo,vim,gpg,gpg-agent,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
+case $( uname -m ) in
+    x86_64)
+        basepkglist="${basepkglist},grub-pc,grub-efi-amd64,linux-image-amd64"
+    ;;
+    aarch64)
+        basepkglist="${basepkglist},grub-efi-arm64,linux-image-arm64"
+    ;;
+esac
 # Supplemental packages (installed in chroot after debootstrap)
 suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp,ipmitool,acpid,acpi-support-base,lsscsi"
 
