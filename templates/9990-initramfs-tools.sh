@@ -54,14 +54,10 @@ panic()
 	printf "\n"
 	printf "  The PVC installer image failed to boot.\n\n"
 	printf "The error message was:\n\n    "
-
-	# Call original panic
-	. /scripts/functions
-	panic "$@"
+	printf "  $@\n\n"
 
     # Reboot system
-    printf
-    printf "System will reboot in 30 seconds"
+    printf "System will reboot in 30 seconds.\n"
     sleep 30
     reboot -f
 }
