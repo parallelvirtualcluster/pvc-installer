@@ -71,8 +71,8 @@ target_deploy_user="XXDEPLOYUSERXX"
 supported_filesystems="ext4 xfs"
 default_filesystem="ext4"
 
-supported_debrelease="buster bullseye"
-default_debrelease="buster"
+supported_debrelease="buster bullseye bookworm"
+default_debrelease="bookworm"
 default_debmirror="http://mirror.csclub.uwaterloo.ca/debian"
 
 # Base packages (installed by debootstrap)
@@ -652,14 +652,14 @@ if [[ ${blockdev_size_gbytes} -ge 100 ]]; then
     size_ceph_lv="8"
     size_zookeeper_lv="32"
     size_swap_lv="16"
-    echo "found large disk (${blockdev_size_gbytes} >= 100GB), using optimal partition sizes."
+    echo "found large disk (${blockdev_size_gbytes}GB >= 100GB), using optimal partition sizes."
 else
     # Minimum sized disk (>=30GB), use small partitions
     size_root_lv="8"
     size_ceph_lv="4"
     size_zookeeper_lv="8"
     size_swap_lv="8"
-    echo "found small disk (${blockdev_size_gbytes} < 100GB), using small partition sizes."
+    echo "found small disk (${blockdev_size_gbytes}GB < 100GB), using small partition sizes."
 fi
 
 echo -n "Unmounting potential partitions on target device... "
@@ -1014,16 +1014,9 @@ seed_postinst() {
 interactive_postinst() {
     set +o errexit
     echo
-    echo -n "Edit the /etc/network/interfaces file in the target before completing setup? If you plan to use bonding, it is prudent to set this up in basic form now! [y/N] "
-    read edit_ifaces
-    if [[ ${edit_ifaces} == 'y' || ${edit_ifaces} == 'Y' ]]; then
-        vim ${target}/etc/network/interfaces
-    fi
-    echo
-
     echo -n "Launch a chroot shell in the target environment? [y/N] "
     read launch_chroot
-    if [[ ${launch_chroot} == 'y' || ${edit_ifaces} == 'Y' ]]; then
+    if [[ ${launch_chroot} == 'y' || ${launch_chroot} == 'Y' ]]; then
         echo "Type 'exit' or Ctrl+D to exit chroot."
         chroot ${target} /bin/bash
     fi
