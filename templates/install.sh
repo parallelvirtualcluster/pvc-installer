@@ -786,10 +786,10 @@ chroot ${target} mkdir -p /var/home/${target_deploy_user}/.ssh
 if [[ -n ${target_keys_path} ]]; then
     case ${target_keys_method} in
         wget)
-            wget -O ${target}/var/home/${target_deploy_user}/.ssh/authorized_keys ${target_keys_path}
+            wget -O ${target}/var/home/${target_deploy_user}/.ssh/authorized_keys ${target_keys_path} || failed_keys="y"
         ;;
         tftp)
-            tftp -m binary "${seed_host}" -c get "${target_keys_path}" ${target}/var/home/${target_deploy_user}/.ssh/authorized_keys
+            tftp -m binary "${seed_host}" -c get "${target_keys_path}" ${target}/var/home/${target_deploy_user}/.ssh/authorized_keys || failed_keys="y"
         ;;
     esac
     chroot ${target} chmod 0600 /var/home/${target_deploy_user}/.ssh/authorized_keys
@@ -798,6 +798,12 @@ else
     echo "${target_deploy_user}:${target_password}" | chroot ${target} chpasswd >&2
 fi
 echo "done."
+if [[ -n ${failed_keys} ]]; then
+    target_password="$( pwgen -s 8 1 )"
+    echo "WARNING: Failed to fetch keys; target deploy user SSH keyauth will fail."
+    echo "Setting temporary random password '${temp_password}' instead."
+    echo "${target_deploy_user}:${target_password}" | chroot ${target} chpasswd >&2
+fi
 
 echo -n "Setting NOPASSWD for sudo group... "
 sed -i 's/^%sudo\tALL=(ALL:ALL) ALL/%sudo\tALL=(ALL:ALL) NOPASSWD: ALL/' ${target}/etc/sudoers
