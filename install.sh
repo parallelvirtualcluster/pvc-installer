@@ -390,6 +390,7 @@ echo "/dev/mapper/vgx-ceph /var/lib/ceph ext4 errors=remount-ro 0 2" | tee -a ${
 echo "/dev/mapper/vgx-swap none swap sw 0 0" | tee -a ${target}/etc/fstab >&2
 echo "${bypath_disk}-part2 /boot ext2 defaults 0 2" | tee -a ${target}/etc/fstab >&2
 echo "${bypath_disk}-part1 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc/fstab >&2
+echo "tmpfs /tmp tmpfs defaults 0 0" | tee -a ${target}/etc/fstab >&2
 echo "done."
 
 echo -n "Adding interface segment... "
