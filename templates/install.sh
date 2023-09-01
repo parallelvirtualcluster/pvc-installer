@@ -63,6 +63,9 @@ done
 iso_name="XXDATEXX"
 target_deploy_user="XXDEPLOYUSERXX"
 
+supported_filesystems="ext4 xfs"
+default_filesystem="ext4"
+
 supported_debrelease="buster bullseye"
 default_debrelease="buster"
 default_debmirror="http://debian.mirror.rafal.ca/debian"
@@ -231,7 +234,25 @@ interactive_config() {
         echo
     done
 
-    echo "2b) Skip disk zeroing? Only recommended for slow, low-endurance, or known-"
+    echo "2b) Please enter an alternate filesystem for the system partitions if desired."
+    echo "    Supported: ${supported_filesystems}"
+    echo "    Default: ${default_filesystem}"
+    while [[ -z ${filesystem} ]]; do
+        echo
+        echo -n "> "
+        read filesystem
+        if [[ -z ${filesystem} ]]; then
+            filesystem="${default_filesystem}"
+        fi
+        if ! grep -qw "${filesystem}" <<<"${supported_filesystem}"; then
+            filesystem=""
+            echo
+            echo "Please enter a valid filesystem."
+            continue
+        fi
+        echo
+    done
+    echo "2c) Skip disk zeroing? Only recommended for slow, low-endurance, or known-"
     echo -n "zeroed block devices. [y/N] "
     read skip_blockcheck
     if [[ ${skip_blockcheck} == 'y' || ${skip_blockcheck} == 'Y' ]]; then
@@ -613,8 +634,8 @@ blockcheck() {
 blockcheck
 
 echo -n "Preparing block device '${target_disk}'... "
-# New GPT, part 1 64MB ESP, part 2 960MB BOOT, part 3 inf LVM PV
-echo -e "o\ny\nn\n1\n\n64M\nEF00\nn\n2\n\n960M\n8300\nn\n3\n\n\n8E00\nw\ny\n" | gdisk ${target_disk} >&2
+# New GPT, part 1 32MB BIOS boot, part 2 64MB ESP, part 3 928MB BOOT, part 4 inf LVM PV
+echo -e "o\ny\nn\n1\n\n32M\nEF02\nn\n2\n\n64M\nEF00\nn\n3\n\n928M\n8300\nn\n4\n\n\n8E00\nw\ny\n" | gdisk ${target_disk} >&2
 echo "done."
 
 echo -n "Rescanning disks... "
@@ -632,22 +653,22 @@ echo "done."
 echo -n "Creating root logical volume (${size_root_lv}GB)... "
 yes | lvcreate -L ${size_root_lv}G -n root vgx >&2
 echo "done."
-echo -n "Creating filesystem on root logical volume (ext4)... "
-yes | mkfs.ext4 /dev/vgx/root >&2
+echo -n "Creating filesystem on root logical volume (${filesystem})... "
+yes | mkfs.${filesystem} /dev/vgx/root >&2
 echo "done."
 
 echo -n "Creating ceph logical volume (${size_ceph_lv}GB)... "
 yes | lvcreate -L ${size_ceph_lv}G -n ceph vgx >&2
 echo "done."
-echo -n "Creating filesystem on ceph logical volume (ext4)... "
-yes | mkfs.ext4 /dev/vgx/ceph >&2
+echo -n "Creating filesystem on ceph logical volume (${filesystem})... "
+yes | mkfs.${filesystem} /dev/vgx/ceph >&2
 echo "done."
 
 echo -n "Creating zookeeper logical volume (${size_zookeeper_lv}GB)... "
 yes | lvcreate -L ${size_zookeeper_lv}G -n zookeeper vgx >&2
 echo "done."
-echo -n "Creating filesystem on zookeeper logical volume (ext4)... "
-yes | mkfs.ext4 /dev/vgx/zookeeper >&2
+echo -n "Creating filesystem on zookeeper logical volume (${filesystem})... "
+yes | mkfs.${filesystem} /dev/vgx/zookeeper >&2
 echo "done."
 
 echo -n "Creating swap logical volume (${size_swap_lv}GB)... "
@@ -712,12 +733,12 @@ for disk in /dev/disk/by-path/*; do
 done
 
 echo -n "Adding fstab entries... "
-echo "/dev/mapper/vgx-root / ext4 errors=remount-ro 0 1" | tee -a ${target}/etc/fstab >&2
-echo "/dev/mapper/vgx-ceph /var/lib/ceph ext4 errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
-echo "/dev/mapper/vgx-zookeeper /var/lib/zookeeper ext4 errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-root / ${filesystem} errors=remount-ro 0 1" | tee -a ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-ceph /var/lib/ceph ${filesystem} errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-zookeeper /var/lib/zookeeper ${filesystem} errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
 echo "/dev/mapper/vgx-swap none swap sw 0 0" | tee -a ${target}/etc/fstab >&2
-echo "${bypath_disk}-part2 /boot ext2 defaults 0 2" | tee -a ${target}/etc/fstab >&2
-echo "${bypath_disk}-part1 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc/fstab >&2
+echo "${bypath_disk}-part3 /boot ext2 defaults 0 2" | tee -a ${target}/etc/fstab >&2
+echo "${bypath_disk}-part2 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc/fstab >&2
 echo "tmpfs /tmp tmpfs defaults 0 0" | tee -a ${target}/etc/fstab >&2
 echo "done."
 
