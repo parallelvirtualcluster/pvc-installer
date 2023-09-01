@@ -17,6 +17,7 @@ this_tty=$( tty | sed -e "s:/dev/::" )
 echo "This TTY: ${this_tty}"
 echo
 
+echo "Waiting for consoles to get ready..."
 if [[ ${#active_ttys[@]} -gt 1 ]]; then
     if [[ "${active_ttys[@]}" =~ "ttyS" ]]; then
         if grep -q -E -o "tty[0-9]+" <<<"${this_tty}"; then
