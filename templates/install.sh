@@ -56,8 +56,8 @@ supported_debrelease="buster bullseye"
 default_debrelease="buster"
 default_debmirror="http://debian.mirror.rafal.ca/debian"
 
-inclpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
-suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp"
+basepkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
+suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp,ipmitool"
 
 # DANGER - THIS PASSWORD IS PUBLIC
 # It should be used ONLY immediately after booting the PVC node in a SECURE environment
@@ -118,6 +118,10 @@ seed_config() {
     tftp -m binary "${seed_host}" -c get "${seed_file}" /tmp/install.seed
 
     . /tmp/install.seed || exit 1
+
+    if [[ -n "${addpkglist}" ]]; then
+        suppkglist="${suppkglist},${addpkglist}"
+    fi
 
     # Handle the target interface
     target_route="$( ip route show to match ${seed_host} | grep 'scope link' )"
@@ -639,8 +643,8 @@ mount -t tmpfs tmpfs ${target}/tmp >&2
 echo "done."
 
 echo -n "Running debootstrap install... "
-echo "Command: debootstrap --include=${inclpkglist} ${debrelease} ${target}/ ${debmirror}" >&2
-debootstrap --include=${inclpkglist} ${debrelease} ${target}/ ${debmirror} >&2
+echo "Command: debootstrap --include=${basepkglist} ${debrelease} ${target}/ ${debmirror}" >&2
+debootstrap --include=${basepkglist} ${debrelease} ${target}/ ${debmirror} >&2
 echo "done."
 
 echo -n "Adding non-free repository (firmware, etc.)... "
