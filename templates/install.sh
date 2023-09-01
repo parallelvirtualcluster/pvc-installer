@@ -210,6 +210,7 @@ seed_config() {
     host_macaddr=$( ip -br link show ${target_interface} | awk '{ print $3 }' )
     host_ipaddr=$( ip -br address show ${target_interface} | awk '{ print $3 }' | awk -F '/' '{ print $1 }' )
 
+    o_target_disk="${target_disk}"
     # Handle the target disk
     case "${target_disk}" in
         /dev/*)
@@ -219,12 +220,12 @@ seed_config() {
         detect:*)
             # Read the detect string into separate variables
             # A detect string is formated thusly:
-            #   detect:<Controller-or-Model-Name>:<0-indexed-ID>:<Capacity-in-human-units>
+            #   detect:<Controller-or-Model-Name>:<Capacity-in-human-units><0-indexed-ID>
             # For example:
-            #   detect:INTEL:1:800GB
-            #   detect:DELLBOSS:0:240GB
-            #   detect:PERC H330 Mini:0:200GB
-            IFS=: read detect b_name b_id b_size <<<"${target_disk}"
+            #   detect:INTEL:800GB:1
+            #   detect:DELLBOSS:240GB:0
+            #   detect:PERC H330 Mini:200GB:0
+            IFS=: read detect b_name b_size b_id <<<"${target_disk}"
             # Get the lsscsi output (exclude NVMe)
             lsscsi_data_all="$( lsscsi -s -N )"
             # Get the available sizes, and match to within +/- 2%
@@ -272,7 +273,7 @@ EOF
     esac
 
     if [[ ! -b ${target_disk} ]]; then
-        echo "Invalid disk or disk not found!"
+        echo "Invalid disk or disk not found for '${o_target_disk}'!"
         exit 1
     fi
 
@@ -864,7 +865,7 @@ else
     action="system-boot_initial"
 fi
 
-sleep 15
+sleep 30
 
 curl -X POST \
     -H "Content-Type: application/json" \
