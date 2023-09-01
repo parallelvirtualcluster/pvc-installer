@@ -50,7 +50,7 @@ while [ $# -gt 0 ]; do
             shift
         ;;
         -k)
-            preserve_livebuild='-l'
+            preserve_livebuild='-k'
             shift
         ;;
         -i)
