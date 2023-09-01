@@ -14,9 +14,8 @@ supported_debrelease="buster bullseye"
 default_debrelease="buster"
 default_debmirror="http://debian.mirror.rafal.ca/debian"
 
-debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python2,python3,ca-certificates,ntp"
-exclpkglist="systemd-timesyncd"
-suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x"
+inclpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python2,python3,ca-certificates"
+suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp"
 
 # DANGER - THIS PASSWORD IS PUBLIC
 # It should be used ONLY immediately after booting the PVC node in a SECURE environment
@@ -540,7 +539,8 @@ mount -t tmpfs tmpfs ${target}/tmp >&2
 echo "done."
 
 echo -n "Running debootstrap install... "
-debootstrap --include=${debpkglist} --exclude=${exclpkglist} ${debrelease} ${target}/ ${debmirror} >&2
+echo "Command: debootstrap --include=${inclpkglist} ${debrelease} ${target}/ ${debmirror}" >&2
+debootstrap --include=${inclpkglist} ${debrelease} ${target}/ ${debmirror} >&2
 echo "done."
 
 echo -n "Adding non-free repository (firmware, etc.)... "
