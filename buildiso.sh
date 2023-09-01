@@ -130,8 +130,9 @@ prepare_rootfs() {
 build_iso() {
     echo -n "Copying live boot configurations... "
     sudo cp -a grub.cfg ${tempdir}/installer/boot/grub/grub.cfg &>/dev/null || fail "Error copying grub.cfg file."
+    sudo cp -a theme.txt ${tempdir}/installer/boot/grub/theme.txt &>/dev/null || fail "Error copying theme.txt file."
     sudo cp -a isolinux.cfg ${tempdir}/installer/isolinux/isolinux.cfg &>/dev/null || fail "Error copying isolinux.cfg file."
-    sudo cp -a splash.png ${tempdir}/installer/isolinux/splash.png &>/dev/null || fail "Error copying splash.png file."
+    sudo cp -a splash.png ${tempdir}/installer/splash.png &>/dev/null || fail "Error copying splash.png file."
     echo "done."
 
     echo -n "Creating LiveCD ISO... "
