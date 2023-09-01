@@ -67,14 +67,12 @@ PACKAGE_LIST_MAIN="live-tools linux-image-amd64 mdadm lvm2 parted gdisk debootst
 PACKAGE_LIST_NONFREE="firmware-bnx2 firmware-bnx2x"
 
 mkdir -p artifacts/lb
-pushd artifacts/lb
+pushd artifacts/lb &>/dev/null
 
-if diff -q ../../install.sh config/includes.chroot/install.sh &>/dev/null; then
-    echo -n "Pre-cleaning due to differences in install.sh... "
-    lb clean
-    echo "done."
-fi
+echo "Pre-cleaning live-build environment..."
+sudo lb clean
 
+echo "Initializing config..."
 # Initialize the live-build config
 lb config --distribution buster --architectures amd64 --archive-areas "main contrib non-free" --apt-recommends false
 
@@ -139,6 +137,7 @@ sed -i "s/XXDATEXX/$(date)/g" config/includes.chroot/install.sh
 sed -i "s/XXDEPLOYUSERXX/${deployusername}/g" config/includes.chroot/install.sh
 
 # Build the live image
+echo "Building live image..."
 sudo lb build
 
 # Move the ISO image out
@@ -146,13 +145,18 @@ cp live-image-amd64.hybrid.iso ../../${isofilename}
 
 # Clean up the artifacts
 if [[ -z ${preserve_artifacts} ]]; then
+    echo "Cleaning live-build environment..."
     sudo lb clean
 fi
 
-popd
+popd &>/dev/null
 
 # Clean up the config
 if [[ -z ${preserve_livebuild} ]]; then
+    echo -n "Removing artifacts... "
     sudo rm -rf artifacts/lb
+    echo "done."
 fi
 
+echo
+echo "Build completed. ISO file: ${isofilename}"

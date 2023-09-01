@@ -85,6 +85,7 @@ build_iso() {
             -u ${deployusername} \
             ${preserve_artifacts} \
             ${preserve_livebuild} || fail "Failed to build ISO."
+        echo
 	fi
 }
 
