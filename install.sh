@@ -200,7 +200,7 @@ EOF
     'dhcp')
         if [[ -n ${vlan_id} ]]; then
             modprobe 8021q >&2
-            vconfig add ${target_interface} ${vlan_id} >&2
+            vconfig add ${target_interface} ${vlan_id} &>/dev/null
             vlan_interface=${target_interface}.${vlan_id}
             target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device${target_interface}"
             dhclient ${vlan_interface} >&2
@@ -212,6 +212,13 @@ EOF
         fi
     ;;
 esac
+echo "done."
+echo
+
+echo -n "Waiting for networking to become ready... "
+while ! ping -q -c 1 8.8.8.8 &>/dev/null; do
+    sleep 1
+done
 echo "done."
 echo
 
@@ -244,6 +251,7 @@ while [[ -z ${debmirror} ]]; do
         debmirror="${default_debmirror}"
     fi
     if ! wget -O /dev/null ${debmirror}/dists/${debrelease}/Release &>/dev/null; then
+        debmirror=""
         echo
         echo "Please enter a valid Debian mirror URL."
         continue
