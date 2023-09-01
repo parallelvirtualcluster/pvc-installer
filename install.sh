@@ -479,7 +479,7 @@ echo -n "Creating LVM PV... "
 yes | pvcreate -ffy ${target_disk}3 >&2
 echo "done."
 
-echo -n "Creating LVM VG named 'vgx'... "
+echo -n "Creating LVM VG 'vgx'... "
 yes | vgcreate vgx ${target_disk}3 >&2
 echo "done."
 
