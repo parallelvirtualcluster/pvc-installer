@@ -83,6 +83,7 @@ fail() {
 
 build_iso() {
     if [[ ! -f pvc-installer_pxe-tmp.iso ]]; then
+        echo "Building installer ISO..."
         ./buildiso.sh \
             -o pvc-installer_pxe-tmp.iso \
             -u ${deployusername} \
