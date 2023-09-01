@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 if [[ $( whoami ) != "root" ]]; then
-    echo "This script is designed to run as root within the installer only!"
+    echo "STOP! This script is designed to run as root within the installer only!"
+    echo "Do not run it on your system. To build a PVC installer ISO, use './buildiso.sh' instead!"
     exit 1
 fi
 
