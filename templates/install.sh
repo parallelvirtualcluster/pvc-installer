@@ -118,9 +118,9 @@ cleanup() {
     if [[ -z ${DONE} ]]; then
         case ${install_option} in
             on)
-                echo "A fatal error occurred; rebooting in 30 seconds. Press any key to spawn a shell."
-                if ! read -t 30; then
-                    reboot
+                echo "A fatal error occurred!; restarting installer in 15 seconds. Press any key to spawn a shell."
+                if ! read -t 15; then
+                    exec ${0}
                 fi
             ;;
             *)
@@ -967,6 +967,7 @@ DONE="y"
 seed_postinst() {
     cleanup
     echo "Temporary root password: ${root_password}"
+    echo
     seed_checkin end
 
     echo "Rebooting in 10 seconds."
