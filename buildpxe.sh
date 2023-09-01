@@ -90,7 +90,7 @@ build_iso() {
 }
 
 build_pxe() {
-    mkdir -p ${outputdir} ${outputdir}/boot
+    mkdir -p ${outputdir} ${outputdir}/host
 
     echo -n "Mounting temporary ISO file... "
     tmpdir=$( mktemp -d )
