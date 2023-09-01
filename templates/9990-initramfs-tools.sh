@@ -57,7 +57,13 @@ panic()
 	printf "  $@\n\n"
 
     # Reboot system
-    printf "System will reboot in 30 seconds.\n"
-    sleep 30
-    reboot -f
+    printf "System will reboot in 30 seconds. Press any key to spawn a shell instead.\n"
+    if ! read -t 30; then
+        sleep 30
+        reboot -f
+    fi
+
+	# Call original panic
+	. /scripts/functions
+    panic "$@"
 }
