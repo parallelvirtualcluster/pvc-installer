@@ -26,16 +26,6 @@ The installer script will ask several questions to configure the bare minimum sy
 
 Follow the prompts carefully; if you make a mistake, you can ^C to cancel the installer, then re-run via `/install.sh` from the resulting root shell.
 
-## Command-line Flags
-
-`-o`: Set the name of the output file, instead of using the standard `pvc-installer_<date>.iso`.
-
-`-s`: Specify an alternate Debian Live ISO source/mirror.
-
-`-a`: Use the cached `squashfs` artifact for the build if possible.
-
-`-u`: Use this name for the initial user account (default is `deploy`).
-
 ## License
 
 Copyright (C) 2018-2021  Joshua M. Boniface <joshua@boniface.me>
