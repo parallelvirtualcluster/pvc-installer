@@ -1,3 +1,3 @@
 #!/bin/sh
-echo "I: remove root password
+echo "I: remove root password"
 passwd --delete root
