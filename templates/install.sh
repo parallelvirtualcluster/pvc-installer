@@ -632,7 +632,7 @@ done
 echo "done."
 
 echo -n "Removing existing LVM physical volumes... "
-for pv in $( pvcscan | grep "${target_disk}" | awk '{ print $2 }' ); do
+for pv in $( pvscan | grep "${target_disk}" | awk '{ print $2 }' ); do
     yes | pvremove -f ${pv} || true
 done
 echo "done."
