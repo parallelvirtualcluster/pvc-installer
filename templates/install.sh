@@ -1113,8 +1113,10 @@ GRUB_TERMINAL_INPUT="console serial"
 GRUB_TERMINAL_OUTPUT="gfxterm serial"
 GRUB_SERIAL_COMMAND="serial --unit=0 --unit=1 --speed=115200"
 EOF
+mount --bind /sys/firmware/efi/efivars ${target}/sys/firmware/efi/efivars
 chroot ${target} grub-install --force --target=${bios_target} ${target_disk} >&2
 chroot ${target} grub-mkconfig -o /boot/grub/grub.cfg >&2
+umount ${target}/sys/firmware/efi/efivars
 echo "done."
 
 echo -n "Adding module blacklists... "
