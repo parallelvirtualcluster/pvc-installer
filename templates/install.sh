@@ -613,6 +613,7 @@ for vg in $( pvscan | grep "${target_disk}" | awk '{ print $4 }' ); do
     vgchange -an ${vg} >&2 || true
     sleep 1
     vgchange -an ${vg} >&2
+    yes | vgremove ${vg}
 done
 echo "done."
 
@@ -667,7 +668,7 @@ yes | pvcreate -ffy ${target_disk}4 >&2
 echo "done."
 
 echo -n "Creating LVM VG 'vgx'... "
-yes | vgcreate vgx ${target_disk}4 >&2
+yes | vgcreate -f vgx ${target_disk}4 >&2
 echo "done."
 
 echo -n "Creating root logical volume (${size_root_lv}GB)... "
