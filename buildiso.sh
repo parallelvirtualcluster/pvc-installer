@@ -9,16 +9,24 @@
 
 liveisofile="$( pwd )/debian-live-buster-DI-rc1-amd64-standard.iso"
 
-fail() {
-    echo $@
-    exit 1
-}
-
 which debootstrap &>/dev/null || fail "This script requires debootstrap."
 which mksquashfs &>/dev/null || fail "This script requires squashfs."
 which xorriso &>/dev/null || fail "This script requires xorriso."
 
 tempdir=$( mktemp -d )
+
+cleanup() {
+    echo -n "Cleaning up... "
+    sudo rm -rf ${tempdir} &>/dev/null
+    echo "done."
+    echo
+}
+
+fail() {
+    echo $@
+    cleanup
+    exit 1
+}
 
 prepare_iso() {
     echo -n "Creating directories... "
@@ -31,8 +39,6 @@ prepare_iso() {
 	sudo rsync -au --exclude live/filesystem.squashfs ${iso_tempdir}/ ${tempdir}/installer/ &>/dev/null || fail "Error extracting LiveISO files."
     sudo umount ${iso_tempdir} &>/dev/null || fail "Error unmounting LiveISO file."
     rmdir ${iso_tempdir} &>/dev/null
-    sudo cp -a grub.cfg ${tempdir}/installer/boot/grub/grub.cfg &>/dev/null || fail "Error copying grub.cfg file."
-    sudo cp -a menu.cfg ${tempdir}/installer/isolinux/menu.cfg &>/dev/null || fail "Error copying menu.cfg file."
     echo "done."
 }
 
@@ -63,11 +69,20 @@ prepare_rootfs() {
     echo "done."
     
     echo -n "Generating squashfs image of live installation... "
-    sudo nice mksquashfs ${tempdir}/rootfs/ ${tempdir}/installer/live/install.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
+    if [[ ! -f filesystem.squashfs ]]; then
+        sudo nice mksquashfs ${tempdir}/rootfs/ ${tempdir}/installer/live/filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
+        cp ${tempdir}/installer/live/filesystem.squashfs filesystem.squashfs &>/dev/null
+    fi
     echo "done."
 }
 
 build_iso() {
+    echo -n "Copying live boot configurations... "
+    sudo cp -a grub.cfg ${tempdir}/installer/boot/grub/grub.cfg &>/dev/null || fail "Error copying grub.cfg file."
+    sudo cp -a menu.cfg ${tempdir}/installer/isolinux/menu.cfg &>/dev/null || fail "Error copying menu.cfg file."
+    sudo cp -a splash.png ${tempdir}/installer/isolinux/splash.png &>/dev/null || fail "Error copying splash.png file."
+    echo "done."
+
     echo -n "Creating LiveCD ISO... "
     pushd ${tempdir}/installer &>/dev/null
     xorriso -as mkisofs \
@@ -87,16 +102,13 @@ build_iso() {
     echo "done."
 
     echo -n "Moving generated ISO to '$(pwd)/pvc-installer.iso'... "
-    mv ${tempdir}/pvc-installer.iso . &>/dev/null || fail "Error moving ISO file."
+    mv ${tempdir}/pvc-installer.iso pvc-installer-new.iso &>/dev/null || fail "Error moving ISO file."
     echo "done."
 }
 
 prepare_iso
 prepare_rootfs
 build_iso
+cleanup
 
-echo -n "Cleaning up... "
-sudo rm -rf ${tempdir} &>/dev/null
-echo "done."
-echo
 echo "PVC Live Installer ISO generation complete."
