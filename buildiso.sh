@@ -11,7 +11,7 @@ which debootstrap &>/dev/null || fail "This script requires debootstrap."
 which mksquashfs &>/dev/null || fail "This script requires squashfs."
 which xorriso &>/dev/null || fail "This script requires xorriso."
 
-isofilename="pvc-installer.iso"
+isofilename="pvc-installer_$(date +%Y-%m-%d).iso"
 srcliveisourl="https://cdimage.debian.org/mirror/cdimage/buster_di_rc1-live/amd64/iso-hybrid/debian-live-buster-DI-rc1-amd64-standard.iso"
 
 show_help() {
