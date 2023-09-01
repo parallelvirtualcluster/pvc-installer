@@ -519,7 +519,7 @@ blockcheck() {
     if ! cmp --silent --bytes ${blockdev_size_bytes} /dev/zero ${target_disk}; then
         echo "false."
         echo "Wiping block device '${target_disk}' (${count} blocks of ${size} bytes)..."
-        dd if=/dev/zero of=${target_disk} bs=${size} count=${count} oflag=direct status=progress
+        dd if=/dev/zero of=${target_disk} bs=${size} count=${count} oflag=direct status=progress 2>&1
     else
         echo "done."
     fi
