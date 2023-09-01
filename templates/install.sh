@@ -73,7 +73,7 @@ default_filesystem="ext4"
 
 supported_debrelease="buster bullseye"
 default_debrelease="buster"
-default_debmirror="http://debian.mirror.rafal.ca/debian"
+default_debmirror="http://mirror.csclub.uwaterloo.ca/debian"
 
 # Base packages (installed by debootstrap)
 basepkglist="lvm2,parted,gdisk,sudo,vim,gpg,gpg-agent,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
