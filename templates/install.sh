@@ -228,17 +228,15 @@ seed_config() {
             IFS=: read detect b_name b_size b_id <<<"${target_disk}"
             # Get the lsscsi output (exclude NVMe)
             lsscsi_data_all="$( lsscsi -s -N )"
-            # Get the available sizes, and match to within +/- 2%
+            # Get the available sizes, and match to within +/- 3%
             lsscsi_sizes=( $( awk '{ print $NF }' <<<"${lsscsi_data_all}" | sort | uniq ) )
             # For each size...
             for size in ${lsscsi_sizes[@]}; do
-                # Get whether we match +2% and -2% sizes to handle human -> real deltas
+                # Get whether we match +3% and -3% sizes to handle human -> real deltas
                 # The break below is pretty safe. I can think of no two classes of disks
-                # where the difference is within 2% of each other. Even the common
-                # 120GB -> 128GB and 240GB -> 256GB size deltas are well outside of 2%,
-                # so this should be safe in all cases. 1% would be narrower but has more
-                # chance of mis-identifying due to rounding, while 3% gets into more
-                # contentious differences, so 2% seems like the best option.
+                # where the difference is within 3% of each other. Even the common
+                # 120GB -> 128GB and 240GB -> 256GB size deltas are well outside of 3%,
+                # so this should be safe in all cases.
                 # We use Python for this due to BASH's problematic handling of floating-
                 # point numbers.
                 is_match="$(
@@ -249,9 +247,9 @@ try:
     t_size = float(sub(r'\D.','','${size}'))
 except ValueError:
     exit(0)
-plustwopct = t_size * 1.02
-minustwopct = t_size * 0.98
-if b_size > minustwopct and b_size < plustwopct:
+plusthreepct = t_size * 1.03
+minusthreepct = t_size * 0.97
+if b_size > minusthreepct and b_size < plusthreepct:
     print("match")
 EOF
                 )"
