@@ -37,21 +37,21 @@ seed_config() {
     echo "Hello ${1}"
     seed_vlan="$( awk '{
         for(i=1; i<=NF; i++) {
-            if($i ~ /pvcinstall.seed_vlan/) {
+            if($i ~ /pvcinstall.seed_vlan=/) {
                 print $i;
             }
         }
     }' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
     seed_host="$( awk '{
         for(i=1; i<=NF; i++) {
-            if($i ~ /pvcinstall.seed_host/) {
+            if($i ~ /pvcinstall.seed_host=/) {
                 print $i;
             }
         }
     }' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
     seed_file="$( awk '{
         for(i=1; i<=NF; i++) {
-            if($i ~ /pvcinstall.seed_file/) {
+            if($i ~ /pvcinstall.seed_file=/) {
                 print $i;
             }
         }
@@ -383,7 +383,7 @@ EOF
 }    
 
 case ${install_option} in
-    on)
+    seed)
         seed_config
     ;;
     *)
@@ -402,8 +402,6 @@ echo
 ### Script begins ###
 echo "LOGFILE: ${logfile}"
 echo
-
-exit 0
 
 set -o errexit
 exec 1> >( tee -ia ${logfile} )
