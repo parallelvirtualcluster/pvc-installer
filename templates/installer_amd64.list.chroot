@@ -1,1 +1,1 @@
-linux-image-amd64 grub-pc-bin grub-efi-amd64
+linux-image-amd64 grub-pc-bin grub-efi-amd64 python-is-python3

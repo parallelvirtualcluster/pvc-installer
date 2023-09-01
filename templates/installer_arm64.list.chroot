@@ -1,1 +1,1 @@
-linux-image-arm64 grub-efi-arm64
+linux-image-arm64 grub-efi-arm64 python-is-python3
