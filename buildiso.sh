@@ -25,6 +25,7 @@ isofilename="pvc-installer_$(date +%Y-%m-%d).iso"
 srcliveisopath="https://cdimage.debian.org/mirror/cdimage/release/current-live/amd64/iso-hybrid"
 srcliveisofilename="$( wget -O- ${srcliveisopath}/ | grep 'debian-live-.*-amd64-standard.iso' | awk -F '"' '{ print $6 }' )"
 srcliveisourl="${srcliveisopath}/${srcliveisofilename}"
+deployusername="deploy"
 
 show_help() {
     echo -e "PVC install ISO generator"
@@ -45,6 +46,7 @@ show_help() {
     echo -e "       the default."
     echo -e "   -a: Use cached squashfs artifact during rebuild (cached ISO and debootstrap"
     echo -e "       artifacts are always used)."
+    echo -e "   -u: Change 'deploy' user to a new username."
 }
 
 while getopts "h?o:s:a" opt; do
@@ -61,6 +63,9 @@ while getopts "h?o:s:a" opt; do
         ;;
         a)
             usecachedsquashfs='y'
+        ;;
+        u)
+            deployusername=$OPTARG
         ;;
     esac
 done
@@ -143,6 +148,7 @@ prepare_rootfs() {
     sudo chroot ${tempdir}/rootfs/ /usr/bin/passwd -d root &>/dev/null || fail "Error disabling root password."
     sudo cp install.sh ${tempdir}/rootfs/ &>/dev/null || fail "Error copying install.sh to tempdir."
     sudo sed -i "s/XXISOXX/${isofilename}/g" ${tempdir}/rootfs/install.sh &>/dev/null || fail "Error editing install.sh script."
+    sudo sed -i "s/XXDEPLOYUSERXX/${deployusername}/g" ${tempdir}/rootfs/install.sh &>/dev/null || fail "Error editing install.sh script."
     echo "done."
     
     echo -n "Generating squashfs image of live installation... "
