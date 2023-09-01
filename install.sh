@@ -518,10 +518,11 @@ blockcheck() {
     echo -n "Checking if block device '${target_disk}' is already wiped... "
     if ! cmp --silent --bytes ${blockdev_size_bytes} /dev/zero ${target_disk}; then
         echo "false."
-        echo -n "Wiping block device '${target_disk}' (${count} blocks of ${size} bytes)... "
-        dd if=/dev/zero of=${target_disk} bs=${size} count=${count} oflag=direct &>/dev/null
+        echo "Wiping block device '${target_disk}' (${count} blocks of ${size} bytes)..."
+        dd if=/dev/zero of=${target_disk} bs=${size} count=${count} oflag=direct status=progress
+    else
+        echo "done."
     fi
-    echo "done."
 }
 blockcheck
 
