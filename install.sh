@@ -125,6 +125,9 @@ case ${target_netformat} in
         formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
         formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
         target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
+        cat <<EOF >/etc/resolv.conf
+nameserver 8.8.8.8
+EOF
     ;;
     'dhcp')
         dhclient ${target_interface} >&2
@@ -361,6 +364,10 @@ echo "done."
 
 echo -n "Setting hostname... "
 echo "${target_hostname}" | tee ${target}/etc/hostname >&2
+echo "done."
+
+echo -n "Setting resolv.conf... "
+echo "nameserver 8.8.8.8" | tee ${target}/etc/resolv.conf >&2
 echo "done."
 
 echo -n "Installing GRUB bootloader... "
