@@ -872,16 +872,29 @@ echo "Command: debootstrap --include=${basepkglist} ${debrelease} ${target}/ ${d
 debootstrap --include=${basepkglist} ${debrelease} ${target}/ ${debmirror} >&2
 echo "done."
 
-echo -n "Adding non-free repository (firmware, etc.)... "
+case ${debrelease} in
+    buster)
+        non_free="non-free"
+    ;;
+    bullseye)
+        non_free="non-free"
+        # python-is-python3 is critical for bullsye
+        suppkglist="python-is-python3,${suppkglist}"
+    ;;
+    bookworm)
+        # Use non-free-firmware component instead of non-free
+        non_free="non-free-firmware"
+        # python-is-python3 is critical for bullsye
+        suppkglist="python-is-python3,${suppkglist}"
+    ;;
+esac
+
+echo -n "Adding ${non_free} APT component (firmware, etc.)... "
 mkdir -p ${target}/etc/apt/sources.list.d/ >&2
-echo "deb ${debmirror} ${debrelease} contrib non-free" | tee -a ${target}/etc/apt/sources.list >&2
+echo "deb ${debmirror} ${debrelease} contrib ${non_free}" | tee -a ${target}/etc/apt/sources.list >&2
 chroot ${target} apt-get update >&2
 echo "done."
 
-# python-is-python3 is critical for bullsye
-if [[ ${debrelease} != "buster" ]]; then
-    suppkglist="python-is-python3,${suppkglist}"
-fi
 
 echo -n "Installing supplemental packages... "
 chroot ${target} apt-get install -y --no-install-recommends $( sed 's/,/ /g' <<<"${suppkglist}" ) >&2
