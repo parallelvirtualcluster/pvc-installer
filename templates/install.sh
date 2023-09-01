@@ -50,9 +50,6 @@ fi
 printf "PID $$ on TTY ${this_tty}" > ${lockfile}
 echo
 
-# Stop all existing networking for a fresh slate
-service networking stop &>/dev/null
-
 # Set the target consoles in the installed image
 target_consoles=""
 for tty in $( echo -e "$( sed 's/ /\n/g' <<<"${active_ttys[@]}" )" | sort ); do
@@ -301,6 +298,9 @@ EOF
 }
 
 interactive_config() {
+    # Stop all existing networking for a fresh slate for interactive config
+    service networking stop &>/dev/null
+
     clear
 
     echo "--------------------------------------------------------"
