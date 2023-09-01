@@ -29,6 +29,7 @@ show_help() {
     echo -e "   -h: Display this help message."
     echo -e "   -o: Create the PXE images under <outputdirectory> instead of the default."
     echo -e "   -u: Change 'deploy' user to a new username."
+    echo -e "   -m: Change the mirror server (default 'https://ftp.debian.org')."
     echo -e "   -a: Preserve live-build artifacts (passed through to buildiso.sh)."
     echo -e "   -k: Preserve live-build config (passed through to buildiso.sh)."
     echo -e "   -i: Preserve live-build ISO image."
@@ -46,6 +47,10 @@ while [ $# -gt 0 ]; do
         ;;
         -u)
             deployusername="${2}"
+            shift 2
+        ;;
+        -m)
+            mirrorserver="-m ${2}"
             shift 2
         ;;
         -a)
@@ -88,6 +93,7 @@ build_iso() {
             -o pvc-installer_pxe-tmp.iso \
             -u ${deployusername} \
             -c x86_64 \
+            ${mirrorserver} \
             ${preserve_artifacts} \
             ${preserve_livebuild} || fail "Failed to build ISO."
         echo
