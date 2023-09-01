@@ -225,6 +225,7 @@ seed_config() {
             #   detect:INTEL:800GB:1
             #   detect:DELLBOSS:240GB:0
             #   detect:PERC H330 Mini:200GB:0
+            echo "Attempting to find disk for detect string '${o_target_disk}'"
             IFS=: read detect b_name b_size b_id <<<"${target_disk}"
             # Get the lsscsi output (exclude NVMe)
             lsscsi_data_all="$( lsscsi -s -N )"
@@ -273,6 +274,8 @@ EOF
     if [[ ! -b ${target_disk} ]]; then
         echo "Invalid disk or disk not found for '${o_target_disk}'!"
         exit 1
+    else
+        echo "Found target disk '${target_disk}'"
     fi
 
     echo
