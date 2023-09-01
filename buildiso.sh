@@ -105,7 +105,13 @@ echo
 
 echo "Initializing config..."
 # Initialize the live-build config
-lb config --distribution buster --archive-areas "main contrib non-free" --apt-recommends false ${arch_config_append} || fail "Failed to initialize live-build config"
+lb config \
+       --distribution buster \
+       --archive-areas "main contrib non-free" \
+       --mirror-bootstrap "https://debian.mirror.rafal.ca/debian" \
+       --mirror-chroot-security "https://debian.mirror.rafal.ca/debian-security" \
+       --apt-recommends false \
+       ${arch_config_append} || fail "Failed to initialize live-build config"
 echo
 
 # Configure the package lists
