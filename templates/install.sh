@@ -49,6 +49,17 @@ fi
 printf "PID $$ on TTY ${this_tty}" > ${lockfile}
 echo
 
+# Set the target consoles in the installed image
+target_consoles=""
+for tty in $( echo -e "$( sed 's/ /\n/g' <<<"${active_ttys[@]}" )" | sort ); do
+    tty_type=${tty%%[0-9]*}
+    # Only use the first of each console type
+    if grep -q "${tty_type}" <<<"${target_consoles}"; then
+        continue
+    fi
+    target_consoles="${target_consoles} console=${tty}"
+done
+
 iso_name="XXDATEXX"
 target_deploy_user="XXDEPLOYUSERXX"
 
@@ -851,7 +862,7 @@ cat <<EOF | tee ${target}/etc/default/grub >&2
 GRUB_DEFAULT=0
 GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="Parallel Virtual Cluster (PVC) - Debian"
-GRUB_CMDLINE_LINUX="console=hvc0 console=tty0 console=tty1 console=ttyS0,115200 console=ttyS1,115200"
+GRUB_CMDLINE_LINUX="${target_consoles}"
 GRUB_TERMINAL_INPUT="console serial"
 GRUB_TERMINAL_OUTPUT="gfxterm serial"
 GRUB_SERIAL_COMMAND="serial --unit=0 --unit=1 --speed=115200"

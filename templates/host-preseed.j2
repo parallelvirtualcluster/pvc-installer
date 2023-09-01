@@ -58,6 +58,12 @@ target_keys_path="keys.txt"
 # Deploy username (usually deploy)
 target_deploy_user="deploy"
 
+# Consoles to use by the inital boot process; these are normally set automatically
+# based on the TTYs found by the installer, and are later overridden by the Ansible
+# playbooks based on the hardware configuration. It is best to leave this commented
+# unless you know that you need it.
+#target_consoles="console=tty1 console=ttyS1,115200"
+
 # Installer checkin URI (provided by pvcbootstrapd)
 #pvcbootstrapd_checkin_uri="http://10.199.199.254:9999/checkin/installer"
 pvcbootstrapd_checkin_uri="{pvcbootstrapd_checkin_uri}"
