@@ -29,7 +29,7 @@ show_help() {
     echo -e "   -h: Display this help message."
     echo -e "   -o: Create the PXE images under <outputdirectory> instead of the default."
     echo -e "   -u: Change 'deploy' user to a new username."
-    echo -e "   -m: Change the mirror server (default 'https://ftp.debian.org')."
+    echo -e "   -m: Change the mirror server (default 'https://ftp.debian.org/debian')."
     echo -e "   -a: Preserve live-build artifacts (passed through to buildiso.sh)."
     echo -e "   -k: Preserve live-build config (passed through to buildiso.sh)."
     echo -e "   -i: Preserve live-build ISO image."

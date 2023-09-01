@@ -29,7 +29,7 @@ show_help() {
     echo -e "   -o: Create the ISO as <output_filename> instead of the default."
     echo -e "   -u: Change 'deploy' user to a new username."
     echo -e "   -c: Change CPU architecture to a new architecture [x86_64/aarch64]."
-    echo -e "   -m: Change the mirror server (default 'https://ftp.debian.org')."
+    echo -e "   -m: Change the mirror server (default 'https://ftp.debian.org/debian')."
     echo -e "   -a: Preserve live-build artifacts."
     echo -e "   -k: Preserve live-build config."
 }
@@ -101,7 +101,7 @@ if [[ -z ${deployusername} ]]; then
     deployusername="deploy"
 fi
 if [[ -z ${mirror_server} ]]; then
-    mirror_server="https://ftp.debian.org"
+    mirror_server="https://ftp.debian.org/debian"
 fi
 
 mkdir -p artifacts/lb
@@ -116,7 +116,7 @@ echo "Initializing config..."
 lb config \
        --distribution bullseye \
        --archive-areas "main contrib non-free" \
-       --mirror-bootstrap "${mirror_server}/debian" \
+       --mirror-bootstrap "${mirror_server}" \
        --mirror-chroot-security "http://security.debian.org/debian-security" \
        --debconf-frontend readline \
        --apt-recommends false \
