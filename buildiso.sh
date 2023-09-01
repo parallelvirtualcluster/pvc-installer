@@ -107,7 +107,7 @@ prepare_rootfs() {
             --include=${SQUASHFS_PKGLIST} \
             buster \
             artifacts/debootstrap/ \
-            http://localhost:3142/ftp.ca.debian.org/debian &>debootstrap.log || fail "Error performing debootstrap."
+            http://ftp.ca.debian.org/debian &>debootstrap.log || fail "Error performing debootstrap."
             sudo chroot artifacts/debootstrap/ apt clean &>/dev/null || fail "Error cleaning apt cache in debootstrap."
     fi
     sudo rsync -au artifacts/debootstrap/ ${tempdir}/rootfs/ &>/dev/null || fail "Error copying debootstrap to tempdir."
