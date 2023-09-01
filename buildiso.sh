@@ -176,6 +176,11 @@ mkdir -p config/includes.chroot/etc/modprobe.d
 cp ../../templates/blacklist.conf config/includes.chroot/etc/modprobe.d/blacklist.conf || fail "Failed to copy critical template file"
 echo "done."
 
+# Install module initramfs requirements (Broadcom NICs)
+echo -n "Copying initramfs modules template... "
+cp ../../templates/modules config/includes.chroot/etc/initramfs-tools/modules || fail "Failed to copy critical template file"
+echo "done."
+
 # Install install.sh script
 echo -n "Copying PVC node installer script template... "
 cp ../../templates/install.sh config/includes.chroot/install.sh || fail "Failed to copy critical template file"
