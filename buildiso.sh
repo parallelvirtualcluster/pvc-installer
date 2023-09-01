@@ -57,7 +57,7 @@ prepare_rootfs() {
    
     echo -n "Configuring Debian live installation... "
     sudo cp -a debootstrap/boot/vmlinuz* ${tempdir}/installer/live/vmlinuz &>/dev/null || fail "Error copying kernel."
-    sudo cp -a debootstrap/boot//initrd.img* ${tempdir}/installer/live/initrd.img &>/dev/null || fail "Error copying initrd."
+    sudo cp -a debootstrap/boot/initrd.img* ${tempdir}/installer/live/initrd.img &>/dev/null || fail "Error copying initrd."
     sudo cp ${tempdir}/rootfs/lib/systemd/system/getty\@.service ${tempdir}/rootfs/etc/systemd/system/getty@tty1.service &>/dev/null || fail "Error copying getty override to tempdir."
     sudo sed -i \
         's|/sbin/agetty|/sbin/agetty --autologin root|g' \
@@ -70,9 +70,9 @@ prepare_rootfs() {
     
     echo -n "Generating squashfs image of live installation... "
     if [[ ! -f filesystem.squashfs ]]; then
-        sudo nice mksquashfs ${tempdir}/rootfs/ ${tempdir}/installer/live/filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
-        cp ${tempdir}/installer/live/filesystem.squashfs filesystem.squashfs &>/dev/null
+        sudo nice mksquashfs ${tempdir}/rootfs/ filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
     fi
+    cp filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
     echo "done."
 }
 
