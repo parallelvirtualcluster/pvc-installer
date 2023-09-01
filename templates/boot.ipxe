@@ -9,7 +9,7 @@ set initrd initrd.img
 set imgargs-base vga=normal nomodeset boot=live components ethdevice-timeout=300 timezone=America/Toronto fetch=${root-url}/filesystem.squashfs username=root
 set imgargs-pvcinstall pvcinstall.preseed=on pvcinstall.seed_host=${next-server} pvcinstall.seed_file=/host/mac-${mac:hexraw}.preseed
 
-# Load per-host kernel command line parameters (should contain ${imgargs-host} if present)
+# Load per-host kernel command line parameters
 chain --autofree ${root-url}/host/mac-${mac:hexraw}.ipxe ||
 
 # Set default menu options

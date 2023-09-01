@@ -1,0 +1,5 @@
+#!ipxe
+
+{% if imgargs_host is defined and imgargs_host %}
+set imgargs-host {{ imgargs_host }}
+{% endif %}

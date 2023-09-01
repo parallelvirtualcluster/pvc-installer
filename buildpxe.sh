@@ -121,7 +121,7 @@ build_pxe() {
     echo "done."
 
     echo -n "Copying base iPXE configuration... "
-    cp templates/boot.pxe ${outputdir}/boot.pxe
+    cp templates/boot.ipxe ${outputdir}/boot.ipxe
     echo "done."
 
     echo -n "Copying preseed template... "
