@@ -132,6 +132,9 @@ echo "done."
 
 # Add root password hook
 echo -n "Copying live-boot templates... "
+cat <<EOF > config/includes.chroot/etc/live/config.conf.d/noeject.conf
+noeject
+EOF
 mkdir -p config/includes.chroot/lib/live/boot/
 cp ../../templates/9990-initramfs-tools.sh config/includes.chroot/lib/live/boot/9990-initramfs-tools.sh || fail "Failed to copy critical template file"
 chmod +x config/includes.chroot/lib/live/boot/9990-initramfs-tools.sh || fail "Failed to copy critical template file"
