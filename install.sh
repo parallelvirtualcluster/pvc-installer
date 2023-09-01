@@ -9,6 +9,7 @@ logfile="/tmp/pvc-install.log"
 debrelease="buster"
 debmirror="http://debian.mirror.rafal.ca/debian"
 debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python,python2,python3,ca-certificates,ntp"
+suppkglist="firmware-linux,firmware-linux-nonfree"
 
 clear
 
@@ -307,6 +308,16 @@ echo "done."
 
 echo -n "Running debootstrap install... "
 debootstrap --include=${debpkglist} ${debrelease} ${target}/ ${debmirror} >&2
+echo "done."
+
+echo -n "Adding non-free repository (firmware, etc.)... "
+mkdir -p ${target}/etc/apt/sources.list.d/ >&2
+echo "deb ${debmirror} ${debrelease} contrib non-free" | tee -a ${target}/etc/apt/sources.list.d/non-free.list >&2
+chroot ${target} apt update >&2
+echo "done."
+
+echo -n "Installing supplemental packages... "
+chroot ${target} apt install -y --no-install-recommends $( sed 's/,/ /g' <<<"${suppkglist}" ) >&2
 echo "done."
 
 # Determine the bypath name of the specified system disk
