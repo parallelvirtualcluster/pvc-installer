@@ -80,6 +80,9 @@ basepkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim
 # Supplemental packages (installed in chroot after debootstrap)
 suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp,ipmitool,acpid,acpi-support-base"
 
+# Modules to blacklist (known-faulty)
+target_module_blacklist=( "hpwdt" )
+
 # DANGER - THIS PASSWORD IS PUBLIC
 # It should be used ONLY immediately after booting the PVC node in a SECURE environment
 # to facilitate troubleshooting of a failed boot. It should NOT be exposed to the Internet,
@@ -951,6 +954,13 @@ GRUB_SERIAL_COMMAND="serial --unit=0 --unit=1 --speed=115200"
 EOF
 chroot ${target} grub-install --force --target=${bios_target} ${target_disk} >&2
 chroot ${target} grub-mkconfig -o /boot/grub/grub.cfg >&2
+echo "done."
+
+echo -n "Adding module blacklists... "
+for module in ${target_module_blacklist[@]}; do
+    echo "blacklist ${module}" >> ${target}/etc/modprobe.d/blacklist.conf
+done
+chroot ${target} update-initramfs -u -k all >&2
 echo "done."
 
 DONE="y"
