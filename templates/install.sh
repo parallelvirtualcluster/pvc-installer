@@ -885,7 +885,6 @@ if [[ \${action} == "system-boot_completed" ]]; then
     # Clean up the bootstrap interface and this script
     rm /etc/network/interfaces.d/\${target_interface}
     rm \$0
-    poweroff
 fi
 EOF
         chmod +x ${target}/etc/network/pvcprovisionerd.checkin.sh
