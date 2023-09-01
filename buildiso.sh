@@ -63,85 +63,86 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-PACKAGE_LIST_MAIN="live-tools live-boot live-boot-initramfs-tools linux-image-amd64 mdadm lvm2 parted gdisk dosfstools debootstrap grub-pc-bin grub-efi-amd64 sipcalc vim ca-certificates vlan tftp-hpa curl ipmitool"
-PACKAGE_LIST_NONFREE="firmware-bnx2 firmware-bnx2x"
-
 mkdir -p artifacts/lb
 pushd artifacts/lb &>/dev/null
 
 echo "Pre-cleaning live-build environment..."
 sudo lb clean
+echo
 
 echo "Initializing config..."
 # Initialize the live-build config
-lb config --distribution buster --architectures amd64 --archive-areas "main contrib non-free" --apt-recommends false
+lb config --distribution buster --architectures amd64 --archive-areas "main contrib non-free" --apt-recommends false || fail "Failed to initialize live-build config"
+echo
 
-# Configure the "standard" live task (no GUI)
-echo "live-task-standard" > config/package-lists/desktop.list.chroot
-
-# Add additional live packages
-echo ${PACKAGE_LIST_MAIN} > config/package-lists/installer.list.chroot
-echo ${PACKAGE_LIST_NONFREE} > config/package-lists/nonfree.list.chroot
+# Configure the package lists
+echo -n "Copying package lists... "
+cp ../../templates/installer.list.chroot config/package-lists/installer.list.chroot || fail "Failed to copy critical template file"
+cp ../../templates/firmware.list.chroot config/package-lists/firmware.list.chroot || fail "Failed to copy critical template file"
+echo "done."
 
 # Add root password hook
-mkdir -p config/includes.chroot/lib/live/config/
-cat <<EOF > config/includes.chroot/lib/live/config/2000-remove-root-pw
-#!/bin/sh
-echo "I: remove root password"
-passwd --delete root
-EOF
-chmod +x config/includes.chroot/lib/live/config/2000-remove-root-pw
+echo -n "Copying live-boot templates... "
+mkdir -p config/includes.chroot/lib/live/boot/
+cp ../../templates/2000-remove-root-pw.sh config/includes.chroot/lib/live/boot/2000-remove-root-pw.sh || fail "Failed to copy critical template file"
+chmod +x config/includes.chroot/lib/live/boot/2000-remove-root-pw.sh || fail "Failed to copy critical template file"
+cp ../../templates/9990-initramfs-tools.sh config/includes.chroot/lib/live/boot/9990-initramfs-tools.sh || fail "Failed to copy critical template file"
+chmod +x config/includes.chroot/lib/live/boot/9990-initramfs-tools.sh || fail "Failed to copy critical template file"
+echo "done."
 
 # Set root bashrc
+echo -n "Copying root bashrc template... "
 mkdir -p config/includes.chroot/root
-echo "/install.sh" > config/includes.chroot/root/.bashrc
+cp ../../templates/root.bashrc config/includes.chroot/root/.bashrc || fail "Failed to copy critical template file"
+echo "done."
 
 # Set hostname and resolv.conf
+echo -n "Copying networking templates... "
 mkdir -p config/includes.chroot/etc
-echo "pvc-live-installer" > config/includes.chroot/etc/hostname
-echo "nameserver 8.8.8.8" > config/includes.chroot/etc/resolv.conf
+cp ../../templates/hostname config/includes.chroot/etc/hostname || fail "Failed to copy critical template file"
+cp ../../templates/resolv.conf config/includes.chroot/etc/resolv.conf || fail "Failed to copy critical template file"
+echo "done."
 
-# Set single vty
+# Set single vty and autologin
+echo -n "Copying getty templates... "
 mkdir -p config/includes.chroot/etc/systemd/
-cat <<EOF > config/includes.chroot/etc/systemd/logind.conf
-[Login]
-NAutoVTs=2
-EOF
-
+cp ../../templates/logind.conf config/includes.chroot/etc/systemd/logind.conf || fail "Failed to copy critical template file"
 mkdir -p config/includes.chroot/etc/systemd/system/getty@.service.d
-cat <<EOF > config/includes.chroot/etc/systemd/system/getty@.service.d/override.conf
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty -o '-p -- \\\u' --autologin root --noclear %I \$TERM
-EOF
-
+cp ../../templates/getty-override.conf  config/includes.chroot/etc/systemd/system/getty@.service.d/override.conf || fail "Failed to copy critical template file"
 mkdir -p config/includes.chroot/etc/systemd/system/serial-getty@.service.d
-cat <<EOF > config/includes.chroot/etc/systemd/system/serial-getty@.service.d/override.conf
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty -o '-p -- \\\u' --autologin root --noclear --keep-baud 115200,38400,9600 %I \$TERM
-EOF
+cp ../../templates/serial-getty-override.conf config/includes.chroot/etc/systemd/system/serial-getty@.service.d/override.conf || fail "Failed to copy critical template file"
+echo "done."
 
 # Install GRUB config, theme, and splash
+echo -n "Copying GRUB templates... "
 mkdir -p config/includes.chroot/boot/grub
-cp ../../grub.cfg config/includes.chroot/boot/grub/grub.cfg
-cp ../../theme.txt config/includes.chroot/boot/grub/theme.txt
-cp ../../splash.png config/includes.chroot/splash.png
+cp ../../templates/grub.cfg config/includes.chroot/boot/grub/grub.cfg || fail "Failed to copy critical template file"
+cp ../../templates/theme.txt config/includes.chroot/boot/grub/theme.txt || fail "Failed to copy critical template file"
+cp ../../templates/splash.png config/includes.chroot/splash.png || fail "Failed to copy critical template file"
+echo "done."
 
 # Install install.sh script
-cp ../../install.sh config/includes.chroot/install.sh
+echo -n "Copying PVC node installer script template... "
+cp ../../templates/install.sh config/includes.chroot/install.sh || fail "Failed to copy critical template file"
 chmod +x config/includes.chroot/install.sh
+echo "done."
 
 # Customize install.sh script
+echo -n "Customizing PVC node installer script... "
 sed -i "s/XXDATEXX/$(date)/g" config/includes.chroot/install.sh
 sed -i "s/XXDEPLOYUSERXX/${deployusername}/g" config/includes.chroot/install.sh
+echo "done."
+echo
 
 # Build the live image
 echo "Building live image..."
-sudo lb build
+sudo lb build || fail "Failed to build live image"
+echo
 
 # Move the ISO image out
+echo -n "Copying generated ISO to repository root... "
 cp live-image-amd64.hybrid.iso ../../${isofilename}
+echo "done."
 
 # Clean up the artifacts
 if [[ -z ${preserve_artifacts} ]]; then
