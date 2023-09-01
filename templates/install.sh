@@ -70,7 +70,7 @@ default_debmirror="http://debian.mirror.rafal.ca/debian"
 # Base packages (installed by debootstrap)
 basepkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
 # Supplemental packages (installed in chroot after debootstrap)
-suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp,ipmitool"
+suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp,ipmitool,acpid,acpi-support-base"
 
 # DANGER - THIS PASSWORD IS PUBLIC
 # It should be used ONLY immediately after booting the PVC node in a SECURE environment
