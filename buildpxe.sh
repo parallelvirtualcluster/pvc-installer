@@ -124,6 +124,10 @@ build_pxe() {
     cp templates/boot.pxe ${outputdir}/boot.pxe
     echo "done."
 
+    echo -n "Copying preseed template... "
+    cp templates/host-preseed.j2 ${outputdir}/host-preseed.j2
+    echo "done."
+
     sudo chown -R $(whoami) ${outputdir}
     sudo chmod -R u+w ${outputdir}
 

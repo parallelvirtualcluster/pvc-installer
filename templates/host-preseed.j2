@@ -1,0 +1,63 @@
+# PVC install.sh preseed configuration Jinja2 template
+#
+# This BASH-compliant variables file is Loaded during PXE installs to preseed the environment.
+# During normal usage, the pvcbootstrapd will load this file, adjust it according to its needs,
+# and write out one instance per node to be installed.
+#
+# This file is thus not designed to be used by humans, and its values are seeded via options in
+# the cluster-local Ansible group_vars, though it can be used as a manual template if required.
+
+###
+### General definitions/overrides
+###
+
+# The Debian release to use (overrides the default)
+#debrelease="buster"
+debrelease="{debrelease}"
+
+# The Debian mirror to use (overrides the default)
+#debmirror="http://debian.mirror.rafal.ca/debian"
+debmirror="{debmirror}"
+
+{% if addpkglist is defined and addpkglist %}
+# Additional packages (comma-separated) to install in the base system
+#addpkglist="mypackage,otherpackage"
+addpkglist="{addpkglist}"
+{% endif %}
+
+{% if skip_blockcheck is defined and skip_blockcheck %}
+# Skip block zeroing; only recommended for testing, slow, low-endurance, or known-zeroed block devices.
+skip_blockcheck="y"
+{% endif %}
+
+###
+### Per-host definitions (required)
+###
+
+# The hostname of the system (set per-run)
+#target_hostname="myhostname.domain.tld"
+target_hostname="{hostname}"
+
+# The target system disk (either a path or model to find; path overrides model if set)
+# Install will fail if these devices aren't found.
+{% if target_disk_path is defined and target_disk_path %}
+#target_disk_path="/dev/disk/by-path/pci-0000:03:00.0-scsi-0:1:0:0"  # Example: RAID device via explicit path
+target_disk_path="{target_disk_path}"
+{% end if %}
+{% if target_disk_model is defined and target_disk_model %}
+#target_disk_model="DELLBOSS VD"                                     # Example: Dell BOSS on R6515 via model name
+target_disk_model="{target_disk_model}"
+{% end if %}
+
+# SSH key method (usually tftp)
+target_keys_method="tftp"
+
+# SSH key path (usually keys.txt)
+target_keys_path="keys.txt"
+
+# Deploy username (usually deploy)
+target_deploy_user="deploy"
+
+# Installer checkin URI (provided by pvcbootstrapd)
+#pvcbootstrapd_checkin_uri="http://10.199.199.254:9999/checkin/installer"
+pvcbootstrapd_checkin_uri="{pvcbootstrapd_checkin_uri}"
