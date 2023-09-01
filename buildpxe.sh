@@ -114,7 +114,6 @@ build_pxe() {
 
 # Set global variables
 set root-url tftp://\${next-server}
-set host-url tftp://\${next-server}/host
 
 set menu-default pvc-installer
 set submenu-default pvc-installer
@@ -122,10 +121,22 @@ set submenu-default pvc-installer
 :pvc-installer
 kernel \${root-url}/vmlinuz
 initrd \${root-url}/initrd.img
-imgargs vmlinuz console=tty0 console=ttyS0,115200n8 boot=live components timezone=America/Toronto fetch=\${root-url}/filesystem.squashfs username=root pvcinstall.preseed=on pvcinstall.seed_host=\${next-server} pvcinstall.seed_file=/host/mac-\${mac:hexraw}.preseed
+imgargs vmlinuz console=tty0 console=ttyS0,115200n8 vga=normal nomodeset boot=live components ethdevice-timeout=60 timezone=America/Toronto fetch=\${root-url}/filesystem.squashfs username=root pvcinstall.preseed=on pvcinstall.seed_host=\${next-server} pvcinstall.seed_file=/host/mac-\${mac:hexraw}.preseed
 
 boot
 EOF
+    echo "done."
+
+    echo -n "Downloading iPXE binary undionly.kpxe (chainloads arbitrary PXE clients)... "
+    pushd ${outputdir} &>/dev/null
+    wget -O undionly.kpxe https://boot.ipxe.org/undionly.kpxe &>/dev/null || fail "failed to download undionly.kpxe."
+    popd &>/dev/null
+    echo "done."
+
+    echo -n "Downloading iPXE binary undionly.kpxe (chainloads UEFI clients)... "
+    pushd ${outputdir} &>/dev/null
+    wget -O ipxe.efi https://boot.ipxe.org/ipxe.efi &>/dev/null || fail "failed to download ipxe.efi."
+    popd &>/dev/null
     echo "done."
 
     sudo chown -R $(whoami) ${outputdir}

@@ -1,12 +1,26 @@
 #!/usr/bin/env bash
 
+logfile="/tmp/pvc-install.log"
+lockfile="/run/pvc-install.lock"
+
 if [[ $( whoami ) != "root" ]]; then
     echo "STOP! This script is designed to run as root within the installer only!"
     echo "Do not run it on your system. To build a PVC installer ISO, use './buildiso.sh' instead!"
     exit 1
 fi
 
-logfile="/tmp/pvc-install.log"
+# Random delay to prevent overlaps
+DELAY=$(( ${RANDOM} % 10 ))
+echo -n "Waiting ${DELAY} seconds... "
+sleep ${DELAY}
+echo "done."
+
+if [[ -f ${lockfile} ]]; then
+    echo "An instance of 'install.sh' is already running!"
+    exit 1
+fi
+touch ${lockfile}
+
 iso_name="XXDATEXX"
 target_deploy_user="XXDEPLOYUSERXX"
 
@@ -14,7 +28,7 @@ supported_debrelease="buster bullseye"
 default_debrelease="buster"
 default_debmirror="http://debian.mirror.rafal.ca/debian"
 
-inclpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python2,python3,ca-certificates"
+inclpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
 suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp"
 
 # DANGER - THIS PASSWORD IS PUBLIC
@@ -24,36 +38,57 @@ suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,n
 # roles will overwrite it by default during configuration.
 root_password="hCb1y2PF"
 
-# Obtain the mode from the kernel command line
-kernel_cmdline=$( cat /proc/cmdline )
-install_option="$( awk '{
-    for(i=1; i<=NF; i++) {
-        if($i ~ /pvcinstall.preseed/) {
-            print $i;
-        }
-    }
-}' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
+# Respawn function
+respawn() (
+    $0 & disown
+)
+
+# Checkin function
+seed_checkin() (
+    case ${1} in
+        start)
+            action="install-start"
+        ;;
+        end)
+            action="install-complete"
+        ;;
+    esac
+    macaddr=$( ip -br link show ${target_interface} | awk '{ print $3 }' )
+    ipaddr=$( ip -br address show ${target_interface} | awk '{ print $3 }' | awk -F '/' '{ print $1 }' )
+    curl -X POST \
+        -H "Content-Type: application/json" \
+        -d "{\"action\":\"${action}\",\"macaddr\":\"${macaddr}\",\"ipaddr\":\"${ipaddr}\",\"hostname\":\"${target_hostname}\",\"bmc_macaddr\":\"${bmc_macaddr}\",\"bmc_ipaddr\":\"${bmc_ipaddr}\"}" \
+        ${pvcbootstrapd_checkin_uri}
+)
+
+# Obtain the preseed options from the kernel command line
+install_option=""
+seed_host=""
+seed_file=""
+kernel_cmdline=( $( cat /proc/cmdline ) )
+for option in ${kernel_cmdline[@]}; do
+    case ${option} in
+        pvcinstall.preseed=*)
+            install_option=${option#pvcinstall.preseed=}
+        ;;
+        pvcinstall.seed_host=*)
+            seed_host=${option#pvcinstall.seed_host=}
+        ;;
+        pvcinstall.seed_file=*)
+            seed_file=${option#pvcinstall.seed_file=}
+        ;;
+    esac
+done
 
 seed_config() {
-    seed_host="$( awk '{
-        for(i=1; i<=NF; i++) {
-            if($i ~ /pvcinstall.seed_host=/) {
-                print $i;
-            }
-        }
-    }' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
-    seed_file="$( awk '{
-        for(i=1; i<=NF; i++) {
-            if($i ~ /pvcinstall.seed_file=/) {
-                print $i;
-            }
-        }
-    }' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
+    # Get IPMI BMC MAC for checkings
+    bmc_macaddr="$( ipmitool lan print | grep 'MAC Address  ' | awk '{ print $NF }' )"
+    bmc_ipaddr="$( ipmitool lan print | grep 'IP Address  ' | awk '{ print $NF }' )"
 
     # Perform DHCP on all interfaces to come online
     for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
         ip link set ${interface} up
-        dhclient ${interface}
+        pgrep dhclient || dhclient ${interface}
     done
 
     # Fetch the seed config
@@ -61,13 +96,13 @@ seed_config() {
 
     . /tmp/install.seed || exit 1
 
+    # Handle the target interface
+    target_route="$( ip route show to match ${seed_host} | grep 'scope link' )"
+    target_interface="$( grep -E -o 'e[a-z]+[0-9]+[a-z0-9]*' <<<"${target_route}" )"
+
     # Handle the target disk
     if [[ -n ${target_disk_path} ]]; then
         target_disk="$( realpath ${target_disk_path} )"
-        if [[ ! -b ${target_disk} ]]; then
-            echo "Invalid disk!"
-            exit 1
-        fi
     else
         # Find the (first) disk with the given model
         for disk in /dev/sd?; do
@@ -78,11 +113,15 @@ seed_config() {
             fi
         done
     fi
+    if [[ ! -b ${target_disk} ]]; then
+        echo "Invalid disk or disk not found!"
+        exit 1
+    fi
 }
 
 interactive_config() {
     clear
-    
+
     echo "--------------------------------------------------------"
     echo "| PVC Node installer (${iso_name}) |"
     echo "--------------------------------------------------------"
@@ -93,7 +132,7 @@ interactive_config() {
     echo "        the questions below, you may do so by typing ^C to cancel the script,"
     echo "        then re-running it by calling /install.sh in the resulting shell."
     echo
-    
+
     echo "1) Please enter a fully-qualified hostname for the system. This should match the hostname"
     echo "in the 'pvc-ansible' inventory."
     while [[ -z ${target_hostname} ]]; do
@@ -107,7 +146,7 @@ interactive_config() {
         fi
         echo
     done
-    
+
     disks="$(
         for disk in /dev/sd? /dev/nvme?n?; do
             if [[ ! -b ${disk} ]]; then
@@ -120,7 +159,7 @@ interactive_config() {
             echo
         done
     )"
-    
+
     echo "2) Please enter the disk to install the PVC base system to. This disk will be"
     echo "wiped, an LVM PV created on it, and the system installed to this LVM."
     echo "* NOTE: PVC requires a disk of at least 30GB to be installed to, and 100GB is the"
@@ -151,7 +190,7 @@ interactive_config() {
         fi
         echo
     done
-    
+
     for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
         ip link set ${interface} up
     done
@@ -183,7 +222,7 @@ interactive_config() {
         fi
         echo
     done
-    
+
     echo -n "3b) Is a tagged vLAN required for the primary network interface? [y/N] "
     read vlans_req
     if [[ ${vlans_req} == 'y' || ${vlans_req} == 'Y' ]]; then
@@ -204,7 +243,7 @@ interactive_config() {
         vlan_id=""
         echo
     fi
-    
+
     echo "3c) Please enter the IP address, in CIDR format [X.X.X.X/YY], of the primary"
     echo "network interface. Leave blank for DHCP configuration of the interface on boot."
     echo
@@ -230,7 +269,7 @@ interactive_config() {
         target_netformat="dhcp"
         echo
     fi
-    
+
     echo -n "Bringing up primary network interface in ${target_netformat} mode... "
     case ${target_netformat} in
         'static')
@@ -244,16 +283,16 @@ interactive_config() {
                 ip route add default via ${target_defgw} >&2 || true
                 formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
                 formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
-                target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device ${target_interface}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
                 real_interface="${vlan_interface}"
+                target_interfaces_is="static-vlan"
             else
                 ip link set ${target_interface} up >&2 || true
                 ip address add ${target_ipaddr} dev ${target_interface} >&2 || true
                 ip route add default via ${target_defgw} >&2 || true
                 formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
                 formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
-                target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
                 real_interface="${target_interface}"
+                target_interfaces_is="static-raw"
             fi
             cat <<EOF >/etc/resolv.conf
 nameserver 8.8.8.8
@@ -264,26 +303,26 @@ EOF
                 modprobe 8021q >&2
                 vconfig add ${target_interface} ${vlan_id} &>/dev/null
                 vlan_interface=${target_interface}.${vlan_id}
-                target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device${target_interface}"
                 dhclient ${vlan_interface} >&2
                 real_interface="${vlan_interface}"
+                target_interfaces_is="dhcp-vlan"
             else
-                target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}"
                 dhclient ${target_interface} >&2
                 real_interface="${target_interface}"
+                target_interfaces_is="dhcp-raw"
             fi
         ;;
     esac
     echo "done."
     echo
-    
+
     echo -n "Waiting for networking to become ready... "
     while ! ping -q -c 1 8.8.8.8 &>/dev/null; do
         sleep 1
     done
     echo "done."
     echo
-    
+
     echo "4a) Please enter an alternate Debian release codename for the system if desired."
     echo "    Supported: ${supported_debrelease}"
     echo "    Default: ${default_debrelease}"
@@ -302,7 +341,7 @@ EOF
         fi
         echo
     done
-    
+
     echo "4b) Please enter an HTTP URL for an alternate Debian mirror if desired."
     echo "    Default: ${default_debmirror}"
     while [[ -z ${debmirror} ]]; do
@@ -322,7 +361,7 @@ EOF
         echo "Repository mirror '${debmirror}' successfully validated."
         echo
     done
-    
+
     target_keys_method="wget"
     echo "5) Please enter an HTTP URL containing a text list of SSH authorized keys to"
     echo "fetch. These keys will be allowed access to the deployment user 'XXDEPLOYUSER'"
@@ -375,12 +414,6 @@ case ${install_option} in
     ;;
 esac
 
-if [[ -f /tmp/pvc-install.lock ]]; then
-    echo "An instance of 'install.sh' is already running!"
-    exit 1
-fi
-touch /tmp/pvc-install.lock
-
 titlestring_text="| Proceeding with installation of host '${target_hostname}'. |"
 titlestring_len="$(( $( wc -c <<<"${titlestring_text}" ) - 2 ))"
 for i in $( seq 0 ${titlestring_len} ); do echo -n "-"; done; echo
@@ -392,9 +425,20 @@ echo
 echo "LOGFILE: ${logfile}"
 echo
 
-set -o errexit
 exec 1> >( tee -ia ${logfile} )
 exec 2> >( tee -ia ${logfile} >/dev/null )
+set -o errexit
+set -o xtrace
+
+case ${install_option} in
+    on)
+        seed_checkin start
+    ;;
+    *)
+        # noop
+        true
+    ;;
+esac
 
 cleanup() {
     set +o errexit
@@ -412,9 +456,19 @@ cleanup() {
     umount ${target} >&2
     vgchange -an >&2
     rmdir ${target} >&2
-    rm /tmp/pvc-install.lock
+    rm ${lockfile}
     echo "done."
     echo
+
+    case ${install_option} in
+        on)
+            respawn
+        ;;
+        *)
+            # noop
+            true
+        ;;
+    esac
 }
 trap cleanup EXIT
 
@@ -524,8 +578,10 @@ echo -n "Creating filesystem on ESP partition (vfat)... "
 yes | mkdosfs -F32 ${target_disk}1 >&2
 echo "done."
 
-echo -n "Mounting disks on temporary target... "
-target=$( mktemp -d )
+vgchange -ay >&2
+target="/tmp/target"
+mkdir -p ${target} >&2
+echo -n "Mounting disks on temporary target '${target}'... "
 mount /dev/vgx/root ${target} >&2
 mkdir -p ${target}/boot >&2
 chattr +i ${target}/boot >&2
@@ -578,8 +634,94 @@ echo "${bypath_disk}-part1 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc
 echo "tmpfs /tmp tmpfs defaults 0 0" | tee -a ${target}/etc/fstab >&2
 echo "done."
 
-echo -n "Adding interface segment... "
-echo -e "${target_interfaces_block}" | tee -a ${target}/etc/network/interfaces >&2
+seed_interfaces_segment() {
+    # A seed install is always "dhcp-raw" since the provisioner is always a dedicated, access port
+    target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet dhcp\npost-up /etc/network/pvcprovisionerd.checkin.sh \$IFACE"
+}
+
+interactive_interfaces_segment() {
+    case ${target_interfaces_is} in
+        static-vlan)
+            target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device ${target_interface}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
+        ;;
+        static-raw)
+            target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
+        ;;
+        dhcp-vlan)
+            target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device${target_interface}"
+        ;;
+        dhcp-raw)
+            target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}"
+        ;;
+    esac
+}
+
+echo -n "Creating bootstrap interface segment... "
+case ${install_option} in
+    on)
+        seed_interfaces_segment
+    ;;
+    *)
+        interactive_interfaces_segment
+    ;;
+esac
+echo "done."
+
+echo -n "Adding bootstrap interface segment... "
+echo -e "${target_interfaces_block}" | tee ${target}/etc/network/interfaces.d/${target_interface} >&2
+echo "done."
+
+case ${install_option} in
+    on)
+        echo -n "Creating bond interface segment... "
+        bond_interfaces="$( ip -br link show | grep -E -o '^e[a-z]+[0-9]+[a-z0-9]*' | grep -v "^${target_interface}$" | tr '\n' ' ' )"
+        bond_interfaces_block="auto bond0\niface bond0 inet manual\n\tbond-mode 802.3ad\n\tbond-slaves ${bond_interfaces}\n\tpost-up ip link set mtu 9000 dev \$IFACE"
+        echo "done."
+
+        echo -n "Adding bond interface segment... "
+        echo -e "${bond_interfaces_block}" | tee ${target}/etc/network/interfaces.d/bond0 >&2
+        echo "done."
+
+        echo -n "Adding bootstrap interface post-up checkin script... "
+        cat <<EOF | tee ${target}/etc/network/pvcprovisionerd.checkin.sh >&2
+#!/usr/bin/env bash
+target_interface=\${1}
+pvcbootstrapd_checkin_uri="${pvcbootstrapd_checkin_uri}"
+macaddr=\$( ip -br link show \${target_interface} | awk '{ print \$3 }' )
+ipaddr=\$( ip -br address show \${target_interface} | awk '{ print \$3 }' | awk -F '/' '{ print \$1 }' )
+bmc_macaddr=\$( ipmitool lan print | grep 'MAC Address  ' | awk '{ print $NF }' )
+bmc_ipaddr=\$( ipmitool lan print | grep 'IP Address  ' | awk '{ print $NF }' )
+if [[ -f /etc/pvc-install.pvcbootstrapd_completed ]]; then
+    # The third boot, when all pvcprovisionerd plugins have been run (this script will henceforth do nothing)
+    action="system-boot_bootstrap-completed"
+elif [[ -f /etc/pvc-install.base && -f /etc/pvc-install.pvc ]]; then
+    # The second boot, when Ansible has been run and plugins running
+    action="system-boot_ansible-completed"
+    touch /etc/pvc-install.pvcbootstrapd_completed
+else
+    # The first boot, when Ansible has not been run yet
+    action="system-boot_initial"
+fi
+curl -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"action\":\"\${action}\",\"macaddr\":\"\${macaddr}\",\"ipaddr\":\"\${ipaddr}\",\"hostname\":\"\$( hostname -s )\",\"bmc_macaddr\":\"\${bmc_macaddr}\",\"bmc_ipaddr\":\"\${bmc_ipaddr}\"}" \
+    \${pvcbootstrapd_checkin_uri}
+
+if [[ -f /etc/pvc-install.pvcbootstrapd_completed ]]; then
+    # Clean up the bootstrap interface and this script
+    rm /etc/network/interfaces.d/\${target_interface}
+    rm \$0
+    exit 0
+fi
+EOF
+        chmod +x ${target}/etc/network/pvcprovisionerd.checkin.sh
+        echo "done."
+    ;;
+    *)
+        # noop
+        true
+    ;;
+esac
 echo "done."
 
 echo -n "Setting temporary 'root' password... "
@@ -613,11 +755,11 @@ echo "done."
 echo -n "Setting /etc/issue generator... "
 mkdir -p ${target}/etc/network/if-up.d >&2
 echo -e "#!/bin/sh
-IP=\"\$( ip -4 addr show dev ${real_interface} | grep inet | awk '{ print \$2 }' | head -1 )\"
+IP=\"\$( ip -4 addr show dev ${target_interface} | grep inet | awk '{ print \$2 }' | head -1 )\"
 cat <<EOF >/etc/issue
 Debian GNU/Linux 10 \\\\n \\\\l
 
-Primary interface IP address: \$IP
+Bootstrap interface IP address: \$IP
 
 EOF" | tee ${target}/etc/network/if-up.d/issue-gen >&2
 chmod +x ${target}/etc/network/if-up.d/issue-gen 1>&2
@@ -648,37 +790,73 @@ if [[ -d /sys/firmware/efi ]]; then
 else
     bios_target="i386-pc"
 fi
+cat <<EOF | tee ${target}/etc/default/grub >&2
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="Parallel Virtual Cluster (PVC) - Debian"
+GRUB_CMDLINE_LINUX="console=hvc0 console=tty0 console=ttyS0,115200"
+GRUB_TERMINAL_INPUT="console serial"
+GRUB_TERMINAL_OUTPUT="gfxterm serial"
+GRUB_SERIAL_COMMAND="serial --unit=0 --unit=1 --speed=115200"
+EOF
 chroot ${target} grub-install --force --target=${bios_target} ${target_disk} >&2
 chroot ${target} grub-mkconfig -o /boot/grub/grub.cfg >&2
 echo "done."
 
-set +o errexit
-echo
-echo -n "Edit the /etc/network/interfaces file in the target before completing setup? If you plan to use bonding, it is prudent to set this up in basic form now! [y/N] "
-read edit_ifaces
-if [[ ${edit_ifaces} == 'y' || ${edit_ifaces} == 'Y' ]]; then
-    vim ${target}/etc/network/interfaces
-fi
-echo
+seed_postinst() {
+    cleanup
+    echo "Temporary root password: ${root_password}"
+    seed_checkin end
 
-echo -n "Launch a chroot shell in the target environment? [y/N] "
-read launch_chroot
-if [[ ${launch_chroot} == 'y' || ${edit_ifaces} == 'Y' ]]; then
-    echo "Type 'exit' or Ctrl+D to exit chroot."
-    chroot ${target} /bin/bash
-fi
+    echo -n "Rebooting in 10 seconds..."
+    i=10
+    while [[ ${i} -gt 0 ]]; do
+        sleep 1
+        i=$(( ${1} - 1 ))
+        echo -n "."
+    done
+    echo
+    reboot
+}
 
-cleanup
+interactive_postinst() {
+    set +o errexit
+    echo
+    echo -n "Edit the /etc/network/interfaces file in the target before completing setup? If you plan to use bonding, it is prudent to set this up in basic form now! [y/N] "
+    read edit_ifaces
+    if [[ ${edit_ifaces} == 'y' || ${edit_ifaces} == 'Y' ]]; then
+        vim ${target}/etc/network/interfaces
+    fi
+    echo
 
-echo "-------------------------------------------------------------------------------------"
-echo "| PVC node installation finished. Next steps:                                       |"
-echo "| 1. Press <enter> to reboot the system.                                            |"
-echo "| 2. Boot the system verify SSH access (IP shown on login screen).                  |"
-echo "| 3. Proceed with system deployment via PVC Ansible.                                |"
-echo "|                                                                                   |"
-echo "| The INSECURE temporary root password if the system will not boot is: ${root_password}     |"
-echo "-------------------------------------------------------------------------------------"
-echo
-read
+    echo -n "Launch a chroot shell in the target environment? [y/N] "
+    read launch_chroot
+    if [[ ${launch_chroot} == 'y' || ${edit_ifaces} == 'Y' ]]; then
+        echo "Type 'exit' or Ctrl+D to exit chroot."
+        chroot ${target} /bin/bash
+    fi
 
-reboot
+    cleanup
+
+    echo "-------------------------------------------------------------------------------------"
+    echo "| PVC node installation finished. Next steps:                                       |"
+    echo "| 1. Press <enter> to reboot the system.                                            |"
+    echo "| 2. Boot the system verify SSH access (IP shown on login screen).                  |"
+    echo "| 3. Proceed with system deployment via PVC Ansible.                                |"
+    echo "|                                                                                   |"
+    echo "| The INSECURE temporary root password if the system will not boot is: ${root_password}     |"
+    echo "-------------------------------------------------------------------------------------"
+    echo
+    read
+
+    reboot
+}
+
+case ${install_option} in
+    on)
+        seed_postinst
+    ;;
+    *)
+        interactive_postinst
+    ;;
+esac

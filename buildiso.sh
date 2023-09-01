@@ -63,7 +63,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-PACKAGE_LIST_MAIN="live-tools linux-image-amd64 mdadm lvm2 parted gdisk dosfstools debootstrap grub-pc-bin grub-efi-amd64 sipcalc vim ca-certificates vlan tftp-hpa"
+PACKAGE_LIST_MAIN="live-tools live-boot live-boot-initramfs-tools linux-image-amd64 mdadm lvm2 parted gdisk dosfstools debootstrap grub-pc-bin grub-efi-amd64 sipcalc vim ca-certificates vlan tftp-hpa curl ipmitool"
 PACKAGE_LIST_NONFREE="firmware-bnx2 firmware-bnx2x"
 
 mkdir -p artifacts/lb
