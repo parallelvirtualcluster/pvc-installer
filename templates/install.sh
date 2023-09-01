@@ -228,6 +228,7 @@ seed_config() {
     echo "WARNING! All data on block device ${target_disk} will be wiped!"
     echo -n "Press any key within 15 seconds to cancel... "
     if read -t 15; then
+        DONE="c"
         exit 0
     fi
     echo
