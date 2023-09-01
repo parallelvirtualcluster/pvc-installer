@@ -4,21 +4,37 @@
 
 This repository contains the generator and configurations for the PVC Live Node Installer ISO. This ISO provides a quick and convenient way to install a PVC base system to a physical server, ready to then be provisioned using the [PVC Ansible](https://github.com/parallelvirtualcluster/pvc-ansible) configuration framework. Part of the [Parallel Virtual Cluster system](https://github.com/parallelvirtualcluster/pvc).
 
-## Using
+## Using the PVC Installer
 
-Run `./buildiso.sh`. This will pull down the Debian LiveCD image, extract it, debootstrap a fresh install environment, copy in the configurations, generate a squashfs, then finally generate an ISO for use via CD-ROM, Virtual Media, or USB/SDCard flash.
+### Preparing
+
+1. Run `./buildiso.sh` from the root of the repository. This will pull down the Debian LiveCD image, extract it, debootstrap a fresh install environment, copy in the configurations, generate a squashfs, then finally generate an ISO file.
 
 Note that artifacts of the build (the LiveCD ISO, debootstrap directory, and squashfs) are cached in `artifacts/` for future reuse.
 
-## Booting
+2. Load the ISO via virtual media or write it to a USB drive.
+
+3. Boot the server from the ISO, ideally in UEFI mode.
+
+### Booting
 
 The built ISO can be booted in either BIOS (traditional ISOLinux) or UEFI (Grub2) modes. It is strongly recommended to use the latter if the system supports it for maximum flexibility.
 
-## Installing
+### Installing
 
 The installer script will ask several questions to configure the bare minimum system needed for [`pvc-ansible`](https://github.com/parallelvirtualcluster/pvc-ansible) to configure the node.
 
 Follow the prompts carefully; if you make a mistake, you can ^C to cancel the installer, then re-run via `/install.sh` from the resulting root shell.
+
+## Command-line Flags
+
+`-o`: Set the name of the output file, instead of using the standard `pvc-installer_<date>.iso`.
+
+`-s`: Specify an alternate Debian Live ISO source/mirror.
+
+`-a`: Use the cached `squashfs` artifact for the build if possible.
+
+`-u`: Use this name for the initial user account (default is `deploy`).
 
 ## License
 
