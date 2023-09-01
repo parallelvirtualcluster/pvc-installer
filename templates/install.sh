@@ -520,9 +520,10 @@ cleanup() {
     if [[ -z ${DONE} ]]; then
         case ${install_option} in
             on)
-                echo "A fatal error occurred; rebooting in 10 seconds."
-                sleep 10
-                reboot
+                echo "A fatal error occurred; rebooting in 10 seconds. Press any key to spawn a shell."
+                if ! read -t 10; then
+                    reboot
+                fi
             ;;
             *)
                 # noop
