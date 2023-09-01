@@ -31,26 +31,37 @@ show_help() {
     echo -e "   -i: Preserve live-build ISO image."
 }
 
-while getopts "h?o:u:aki" opt; do
-    case "$opt" in
-        h|\?)
+while [ $# -gt 0 ]; do
+    case "${1}" in
+        -h|\?)
             show_help
             exit 0
         ;;
-        o)
-            outputdir="$OPTARG"
+        -o)
+            outputdir="${2}"
+            shift 2
         ;;
-        u)
-            deployusername=$OPTARG
+        -u)
+            deployusername="${2}"
+            shift 2
         ;;
-        a)
+        -a)
             preserve_artifacts='-a'
+            shift
         ;;
-        k)
+        -k)
             preserve_livebuild='-l'
+            shift
         ;;
-        i)
+        -i)
             preserve_liveiso='y'
+            shift
+        ;;
+        *)
+            echo "Invalid option: ${1}"
+            echo
+            show_help
+            exit 1
         ;;
     esac
 done
@@ -73,7 +84,7 @@ build_iso() {
             -o pvc-installer_pxe-tmp.iso \
             -u ${deployusername} \
             ${preserve_artifacts} \
-            ${preserve_livebuild}
+            ${preserve_livebuild} || fail "Failed to build ISO."
 	fi
 }
 

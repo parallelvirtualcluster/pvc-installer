@@ -32,23 +32,33 @@ show_help() {
     echo -e "   -k: Preserve live-build config."
 }
 
-while getopts "h?o:u:ak" opt; do
-    case "$opt" in
-        h|\?)
+while [ $# -gt 0 ]; do
+    case "${1}" in
+        -h|\?)
             show_help
             exit 0
         ;;
-        o)
-            isofilename=$OPTARG
+        -o)
+            isofilename="${2}"
+            shift 2
         ;;
-        u)
-            deployusername=$OPTARG
+        -u)
+            deployusername="${2}"
+            shift 2
         ;;
-        a)
+        -a)
             preserve_artifacts='y'
+            shift
         ;;
-        k)
+        -k)
             preserve_livebuild='y'
+            shift
+        ;;
+        *)
+            echo "Invalid option: ${1}"
+            echo
+            show_help
+            exit 1
         ;;
     esac
 done
@@ -58,6 +68,12 @@ PACKAGE_LIST_NONFREE="firmware-bnx2 firmware-bnx2x"
 
 mkdir -p artifacts/lb
 pushd artifacts/lb
+
+if diff -q ../../install.sh config/includes.chroot/install.sh &>/dev/null; then
+    echo -n "Pre-cleaning due to differences in install.sh... "
+    lb clean
+    echo "done."
+fi
 
 # Initialize the live-build config
 lb config --distribution buster --architectures amd64 --archive-areas "main contrib non-free" --apt-recommends false
