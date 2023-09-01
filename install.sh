@@ -158,9 +158,9 @@ exec 2> >( tee -ia ${logfile} >/dev/null )
 echo -n "Bringing up primary network interface in ${target_netformat} mode... "
 case ${target_netformat} in
     'static')
-        ip link set ${target_interface} up >&2
-        ip address add ${target_ipaddr} dev ${target_interface} >&2
-        ip route add default via ${target_defgw} >&2
+        ip link set ${target_interface} up >&2 || true
+        ip address add ${target_ipaddr} dev ${target_interface} >&2 || true
+        ip route add default via ${target_defgw} >&2 || true
         formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
         formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
         target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
@@ -256,6 +256,15 @@ fi
 
 echo -n "Setting hostname... "
 echo "${target_hostname}" | sudo tee ${target}/etc/hostname >&2
+echo "done."
+
+echo -n "Setting /etc/issue generator... "
+cat <<EOF >${target}/etc/if-up.d/issue-gen
+#!/bin/sh
+IP="\$( ip addr show dev ${target_interface} | grep 'inet' | awk '{ print \$2 }' )"
+echo -e "Debian GNU/Linux 10 \\n \\l\n\nPrimary interface IP address: \$IP\n" > /etc/issue
+EOF
+chmod +x ${target}/etc/if-up.d/issue-gen 1>&2
 echo "done."
 
 echo -n "Installing GRUB bootloader... "
