@@ -35,7 +35,7 @@ if [[ ${#active_ttys} -gt 1 ]]; then
     else
         echo "Found more than one graphical TTY!"
         echo -n "If you wish to run the installer on this graphical TTY, press enter within 60 seconds... "
-        if ! read -t 60; then
+        if ! read -t 60 _d; then
             echo "timeout."
             echo "To launch the installer again on this TTY, run '/install.sh'."
             exit 0
@@ -76,7 +76,7 @@ default_filesystem="ext4"
 
 supported_debrelease="buster bullseye bookworm"
 default_debrelease="bookworm"
-default_debmirror="http://mirror.csclub.uwaterloo.ca/debian"
+default_debmirror="http://ftp.debian.org/debian"
 
 # Base packages (installed by debootstrap)
 basepkglist="lvm2,parted,gdisk,sudo,vim,gpg,gpg-agent,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
@@ -348,13 +348,16 @@ interactive_config() {
     echo "| Section 2: Disk setup                                |"
     echo "--------------------------------------------------------"
     echo
-    echo "2a) Please enter the disk to install the PVC base system to. This disk will be"
-    echo "wiped, an LVM PV created on it, and the system installed to this LVM."
+    echo "2a) Please enter the disk to install the PVC base system to. This disk will be WIPED,"
+    echo "an LVM PV created on it, and the system installed to this LVM."
+    echo
     echo "* NOTE: PVC requires a disk of at least 30GB to be installed to, and 100GB is the"
     echo "recommended minimum size for optimal production partition sizes."
-    echo "* NOTE: For optimal performance, this disk should be high-performance flash (SSD, etc.)."
-    echo "* NOTE: This disk should be a RAID-1 volume configured in hardware, or a durable storage"
-    echo "device, maximum redundancy and resiliency."
+    echo
+    echo "* NOTE: This disk should be high-performance flash (SSD, etc.)."
+    echo
+    echo "* NOTE: This disk should be a RAID-1 volume configured in hardware, or a very durable"
+    echo "storage device, for maximum redundancy and resiliency."
     echo
     echo "Available disks:"
     echo
@@ -398,17 +401,21 @@ interactive_config() {
         echo
     done
 
-    for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
-        ip link set ${interface} up
-    done
-    sleep 2
-    interfaces="$(
-        ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2"\t"$3 }' | tr -d ':'
-    )"
     echo "--------------------------------------------------------"
     echo "| Section 3: Networking                                |"
     echo "--------------------------------------------------------"
     echo
+    
+    echo -n "Probing interfaces... "
+    for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
+        ip link set ${interface} up
+    done
+    sleep 5
+    interfaces="$(
+        ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2"\t"$3 }' | tr -d ':'
+    )"
+    echo "done."
+
     echo "Available interfaces:"
     echo
     echo -e "$( sed 's/\(.*\)/  \1/' <<<"${interfaces[@]}" )"
