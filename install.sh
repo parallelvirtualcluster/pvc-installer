@@ -302,6 +302,7 @@ cat <<EOF >/etc/issue
 Debian GNU/Linux 10 \\\\n \\\\l
 
 Primary interface IP address: \$IP
+
 EOF" | tee ${target}/etc/network/if-up.d/issue-gen >&2
 chmod +x ${target}/etc/network/if-up.d/issue-gen 1>&2
 echo "done."
@@ -329,7 +330,9 @@ for i in $( seq 2 86 ); do echo -n "-"; done; echo
 echo "${titlestring_text}"
 echo "| 1. Press <enter> to reboot the system.                                            |"
 echo "| 2. Boot the PVC base hypervisor and verify SSH access (IP shown on login screen). |"
-echo "| 3. Configure /etc/network/interfaces to the cluster specifications.               |"
+echo "| 3. Configure /etc/network/interfaces to the cluster specifications. Remember to   |"
+echo "|    remove the static or DHCP specification of the primary interface; the daemon   |"
+echo "|    manages this automatically.                                                    |"
 echo "| 4. Proceed with system deployment via PVC Ansible.                                |"
 for i in $( seq 2 86 ); do echo -n "-"; done; echo
 echo
