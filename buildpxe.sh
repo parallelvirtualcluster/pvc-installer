@@ -79,8 +79,9 @@ fail() {
 }
 
 build_iso() {
+    idir=$( dirname $0 )
     if [[ ! -f pvc-installer_pxe-tmp.iso ]]; then
-        ./buildiso.sh \
+        ${idir}/buildiso.sh \
             -o pvc-installer_pxe-tmp.iso \
             -u ${deployusername} \
             ${preserve_artifacts} \
