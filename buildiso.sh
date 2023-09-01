@@ -105,7 +105,7 @@ echo
 
 echo "Initializing config..."
 # Initialize the live-build config
-lb config --distribution bullseye --archive-areas "main contrib non-free" --apt-recommends false ${arch_config_append} || fail "Failed to initialize live-build config"
+lb config --distribution buster --archive-areas "main contrib non-free" --apt-recommends false ${arch_config_append} || fail "Failed to initialize live-build config"
 echo
 
 # Configure the package lists
