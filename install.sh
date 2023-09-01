@@ -283,9 +283,9 @@ titlestring_text="| PVC node installation finished. Press <Enter> to reboot into
 titlestring_len="$( wc -c <<<"${titlestring_text}" )"
 for i in $( seq 2 ${titlestring_len} ); do echo -n "-"; done; echo
 echo "${titlestring_text}"
-echo "Verify the system is configured as you would expect, add any additional interfaces"
-echo "to the /etc/network/interfaces file, and then run the PVC Ansible role in"
-echo "'bootstrap=yes' mode to continue deploying the PVC system."
+echo "| On successful boot, verify the system is configured as you would expect, add any   |"
+echo "| additional interfaces to the /etc/network/interfaces file, and then run the PVC    |"
+echo "| Ansible role against this host to complete deploying this PVC node.                |"
 for i in $( seq 2 ${titlestring_len} ); do echo -n "-"; done; echo
 echo
 read
