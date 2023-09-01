@@ -156,6 +156,7 @@ exec 1> >( tee -ia ${logfile} )
 exec 2> >( tee -ia ${logfile} >/dev/null )
 
 cleanup() {
+    set +o errexit
     echo -n "Cleaning up... "
     umount ${target}/sys >&2
     umount ${target}/proc >&2
@@ -294,8 +295,8 @@ IP=\"\$( ip -4 addr show dev ${target_interface} | grep inet | awk '{ print \$2 
 echo \"Debian GNU/Linux 10 \\\\n \\\\l
 
 Primary interface IP address: \$IP
-\" > /etc/issue" | tee ${target}/etc/if-up.d/issue-gen >&2
-chmod +x ${target}/etc/if-up.d/issue-gen 1>&2
+\" > /etc/issue" | tee ${target}/etc/network/if-up.d/issue-gen >&2
+chmod +x ${target}/etc/network/if-up.d/issue-gen 1>&2
 echo "done."
 
 echo -n "Installing GRUB bootloader... "
