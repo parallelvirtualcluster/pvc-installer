@@ -79,14 +79,14 @@ fail() {
 }
 
 build_iso() {
-	if [[ ! -f pvc-installer_pxe-tmp.iso ]]; then
-	    ./buildiso.sh \
+    if [[ ! -f pvc-installer_pxe-tmp.iso ]]; then
+        ./buildiso.sh \
             -o pvc-installer_pxe-tmp.iso \
             -u ${deployusername} \
             ${preserve_artifacts} \
             ${preserve_livebuild} || fail "Failed to build ISO."
         echo
-	fi
+    fi
 }
 
 build_pxe() {
@@ -128,10 +128,10 @@ initrd \${root-url}/initrd.img
 imgargs vmlinuz console=tty0 console=ttyS0,115200n8 boot=live components timezone=America/Toronto fetch=\${root-url}/filesystem.squashfs username=root \${host-args}
 boot
 EOF
-	echo "done."
+    echo "done."
 
-	sudo chown -R $(whoami) ${outputdir}
-	sudo chmod -R u+w ${outputdir}
+    sudo chown -R $(whoami) ${outputdir}
+    sudo chmod -R u+w ${outputdir}
 
     if [[ -z ${preserve_liveiso} ]]; then
         echo -n "Removing temporary ISO... "
