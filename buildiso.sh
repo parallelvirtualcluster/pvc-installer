@@ -114,8 +114,8 @@ echo
 echo "Initializing config..."
 # Initialize the live-build config
 lb config \
-       --distribution bookworm \
-       --archive-areas "main contrib non-free-firmware" \
+       --distribution bullseye \
+       --archive-areas "main contrib non-free" \
        --mirror-bootstrap "${mirror_server}/debian" \
        --mirror-chroot-security "${mirror_server}/debian-security" \
        --debconf-frontend readline \
