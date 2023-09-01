@@ -121,7 +121,7 @@ set submenu-default pvc-installer
 :pvc-installer
 kernel \${root-url}/vmlinuz
 initrd \${root-url}/initrd.img
-imgargs vmlinuz console=tty0 console=ttyS0,115200n8 vga=normal nomodeset boot=live components ethdevice-timeout=60 timezone=America/Toronto fetch=\${root-url}/filesystem.squashfs username=root pvcinstall.preseed=on pvcinstall.seed_host=\${next-server} pvcinstall.seed_file=/host/mac-\${mac:hexraw}.preseed
+imgargs vmlinuz console=tty0 console=ttyS0,115200n8 vga=normal nomodeset boot=live components ethdevice-timeout=600 timezone=America/Toronto fetch=\${root-url}/filesystem.squashfs username=root pvcinstall.preseed=on pvcinstall.seed_host=\${next-server} pvcinstall.seed_file=/host/mac-\${mac:hexraw}.preseed
 
 boot
 EOF
