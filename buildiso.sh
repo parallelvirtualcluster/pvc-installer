@@ -15,6 +15,9 @@ fail() {
 which lb &>/dev/null || fail "This script requires live-build"
 sudo -n true &>/dev/null || fail "The user running this script must have sudo privileges."
 
+idir=$( dirname $0 )
+pushd ${idir} &>/dev/null
+
 isofilename="pvc-installer_$(date +%Y-%m-%d).iso"
 deployusername="deploy"
 
@@ -168,3 +171,5 @@ fi
 
 echo
 echo "Build completed. ISO file: ${isofilename}"
+
+popd &>/dev/null

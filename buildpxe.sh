@@ -11,6 +11,9 @@ test -f /usr/lib/PXELINUX/pxelinux.0 &>/dev/null || fail "This script requires p
 test -f /usr/lib/syslinux/modules/bios/ldlinux.c32 &>/dev/null || fail "This script requires pxelinux and syslinux-common"
 sudo -n true &>/dev/null || fail "The user running this script must have sudo privileges."
 
+idir=$( dirname $0 )
+pushd ${idir} &>/dev/null
+
 outputdir="pvc-installer-pxe_$(date +%Y-%m-%d)/"
 deployusername="deploy"
 
@@ -79,9 +82,8 @@ fail() {
 }
 
 build_iso() {
-    idir=$( dirname $0 )
     if [[ ! -f pvc-installer_pxe-tmp.iso ]]; then
-        ${idir}/buildiso.sh \
+        ./buildiso.sh \
             -o pvc-installer_pxe-tmp.iso \
             -u ${deployusername} \
             ${preserve_artifacts} \
@@ -145,3 +147,5 @@ build_pxe
 cleanup
 
 echo "PVC Live Installer PXE generation complete."
+
+popd &>/dev/null
