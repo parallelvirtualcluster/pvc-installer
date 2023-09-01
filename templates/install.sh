@@ -13,12 +13,12 @@ fi
 echo
 active_ttys=( $( w | grep "^root" | awk '{ print $2 }' ) )
 echo "Active TTYs: ${active_ttys[@]}"
-this_tty=$( tty | sed -e "s/.*tty\(.*\)/\1/" )
+this_tty=$( tty | sed -e "s:/dev/::" )
 echo "This TTY: ${this_tty}"
 echo
 
 if [[ ${#active_ttys} -gt 1 ]]; then
-    if "${active_ttys[@]}" =~ "ttyS" ]]; then
+    if [[ "${active_ttys[@]}" =~ "ttyS" ]]; then
         if [[ "${this_tty}" =~ "tty[0-9]+" ]]; then
             echo "Found more than one TTY and at least one serial TTY!"
             echo -n "If you wish to run the installer on this graphical TTY instead of the serial TTY, press enter within 15 seconds... "
