@@ -9,7 +9,7 @@ logfile="/tmp/pvc-install.log"
 debrelease="buster"
 debmirror="http://debian.mirror.rafal.ca/debian"
 debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python,python2,python3,ca-certificates,ntp"
-suppkglist="firmware-linux,firmware-linux-nonfree"
+suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x"
 
 # DANGER - THIS PASSWORD IS PUBLIC
 # It should be used ONLY immediately after booting the PVC node in a SECURE environment
@@ -417,6 +417,14 @@ echo "Edit the /etc/network/interfaces file in the target before completing setu
 read edit_ifaces
 if [[ ${edit_ifaces} == 'y' || ${edit_ifaces} == 'Y' ]]; then
     vim ${target}/etc/network/interfaces
+fi
+echo
+
+echo "Launch a chroot shell in the target environment? [y/N]"
+read launch_chroot
+if [[ ${launch_chroot} == 'y' || ${edit_ifaces} == 'Y' ]]; then
+    echo "Type 'exit' or Ctrl+D to exit chroot."
+    chroot ${target} /bin/bash
 fi
 echo
 
