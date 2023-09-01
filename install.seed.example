@@ -1,0 +1,35 @@
+###
+### General definitions
+###
+
+# The Debian release to use
+debrelease="bullseye"
+
+# The Debian mirror to use
+debmirror="http://debian.mirror.rafal.ca/debian"
+
+# Package list (installed during debootstrap)
+debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python2,python3,ca-certificates,ntp"
+
+# Package list (installed in chroot)
+suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x"
+
+###
+### Per-host definitions
+###
+
+# The hostname of the system (set per-run)
+target_hostname="HOSTNAME"
+
+# The target disk (either path or model to find; path overrides model if set)
+target_disk_path="/dev/disk/by-path/pci-0000:01:00.0-scsi-0:2:0:0"  # Example: Dell BOSS on R6515 via explicit path
+target_disk_model="DELLBOSS VD"                                     # Example: Dell BOSS on R6515 via model name
+
+# SSH key method (usually tftp)
+target_keys_method="tftp"
+
+# SSH key path
+target_keys_path="keys.txt"
+
+# Deploy username
+target_deploy_user="deploy"

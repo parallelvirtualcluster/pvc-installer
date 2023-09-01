@@ -6,10 +6,13 @@ if [[ $( whoami ) != "root" ]]; then
     exit 1
 fi
 
-logfile="/tmp/pvc-install.log"
+iso_name="XXDATEXX"
+target_deploy_user="XXDEPLOYUSERXX"
+
 supported_debrelease="buster bullseye"
 default_debrelease="buster"
 default_debmirror="http://debian.mirror.rafal.ca/debian"
+
 debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python2,python3,ca-certificates,ntp"
 suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x"
 
@@ -20,288 +23,374 @@ suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x"
 # roles will overwrite it by default during configuration.
 root_password="hCb1y2PF"
 
-clear
+# Obtain the mode from the kernel command line
+kernel_cmdline=$( cat /proc/cmdline )
+install_option="$( awk '{
+    for(i=1; i<=NF; i++) {
+        if($i ~ /pvcinstall.preseed/) {
+            print $i;
+        }
+    }
+}' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
 
-echo "--------------------------------------------------------"
-echo "| PVC Node installer (XXDATEXX) |"
-echo "--------------------------------------------------------"
-echo
-echo "This LiveCD will install a PVC node base system ready for bootstrapping with 'pvc-ansible'."
-echo
-echo "* NOTE: If you make a mistake and need to restart the installer while answering"
-echo "        the questions below, you may do so by typing ^C to cancel the script,"
-echo "        then re-running it by calling /install.sh in the resulting shell."
-echo
+seed_config() {
+    echo "Hello ${1}"
+    seed_vlan="$( awk '{
+        for(i=1; i<=NF; i++) {
+            if($i ~ /pvcinstall.seed_vlan/) {
+                print $i;
+            }
+        }
+    }' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
+    seed_host="$( awk '{
+        for(i=1; i<=NF; i++) {
+            if($i ~ /pvcinstall.seed_host/) {
+                print $i;
+            }
+        }
+    }' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
+    seed_file="$( awk '{
+        for(i=1; i<=NF; i++) {
+            if($i ~ /pvcinstall.seed_file/) {
+                print $i;
+            }
+        }
+    }' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
 
-echo "1) Please enter a fully-qualified hostname for the system. This should match the hostname"
-echo "in the 'pvc-ansible' inventory."
-while [[ -z ${target_hostname} ]]; do
-    echo
-    echo -n "> "
-    read target_hostname
-    if [[ -z ${target_hostname} ]]; then
-        echo
-        echo "Please enter a hostname."
-        continue
+    if [[ -n ${seed_vlan} ]]; then
+        modprobe 8021q
     fi
-    echo
-done
 
-disks="$(
-    for disk in /dev/sd? /dev/nvme?n?; do
-        if [[ ! -b ${disk} ]]; then
-            continue
-        fi
-        disk_data="$( fdisk -l ${disk} 2>/dev/null )"
-        echo -n "${disk}"
-        echo -en "\t$( grep "^Disk model:" <<<"${disk_data}" | awk '{ $1=""; print $0 }' )"
-        echo -en "  $( grep "^Disk ${disk}:" <<<"${disk_data}" | awk '{ $1=""; $2="size:"; print $0 }' )"
-        echo
-    done
-)"
-
-echo "2) Please enter the disk to install the PVC base system to. This disk will be"
-echo "wiped, an LVM PV created on it, and the system installed to this LVM."
-echo "* NOTE: PVC requires a disk of at least 30GB to be installed to, and 100GB is the"
-echo "recommended minimum size for optimal production partition sizes."
-echo "* NOTE: For optimal performance, this disk should be high-performance flash (SSD, etc.)."
-echo "* NOTE: This disk should be a RAID-1 volume configured in hardware, or a durable storage"
-echo "device, maximum redundancy and resiliency."
-echo
-echo "Available disks:"
-echo
-echo -e "$( sed 's/\(.*\)/  \1/' <<<"${disks[@]}" )"
-while [[ ! -b ${target_disk} ]]; do
-    echo
-    echo -n "> "
-    read target_disk
-    if [[ ! -b ${target_disk} ]]; then
-        echo
-        echo "Please enter a valid target disk."
-        continue
-    fi
-    blockdev_size="$(( $( blockdev --getsize64 ${target_disk} ) / 1024 / 1024 / 1024 - 1))"
-    if [[ ${blockdev_size} -lt 30 ]]; then
-        target_disk=""
-        echo
-        echo "The specified disk is too small (<30 GB) to use as a PVC system disk."
-        echo "Please choose an alternative disk."
-        continue
-    fi
-    echo
-done
-
-for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
-    ip link set ${interface} up
-done
-sleep 2
-interfaces="$(
-    ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2"\t"$3 }' | tr -d ':'
-)"
-echo "3a) Please enter the primary network interface for external connectivity. If"
-echo "no entries are shown here, ensure a cable is connected, then restart the"
-echo "installer with ^C and '/install.sh'."
-echo
-echo "Available interfaces:"
-echo
-echo -e "$( sed 's/\(.*\)/  \1/' <<<"${interfaces[@]}" )"
-while [[ -z ${target_interface} ]]; do
-    echo
-    echo -n "> "
-    read target_interface
-    if [[ -z ${target_interface} ]]; then
-        echo
-        echo "Please enter a valid interface."
-        continue
-    fi
-    if ! grep -qw "${target_interface}" <<<"${interfaces[@]}"; then
-        target_interface=""
-        echo
-        echo "Please enter a valid interface."
-        continue
-    fi
-    echo
-done
-
-echo -n "3b) Is a tagged vLAN required for the primary network interface? [y/N] "
-read vlans_req
-if [[ ${vlans_req} == 'y' || ${vlans_req} == 'Y' ]]; then
-    echo
-    echo "Please enter the vLAN ID for the interface."
-    while [[ -z ${vlan_id} ]]; do
-        echo
-        echo -n "> "
-        read vlan_id
-        if [[ -z ${vlan_id} ]]; then
-            echo
-            echo "Please enter a numeric vLAN ID."
-            continue
-        fi
-    done
-    echo
-else
-    vlan_id=""
-    echo
-fi
-
-echo "3c) Please enter the IP address, in CIDR format [X.X.X.X/YY], of the primary"
-echo "network interface. Leave blank for DHCP configuration of the interface on boot."
-echo
-echo -n "> "
-read target_ipaddr
-if [[ -n ${target_ipaddr} ]]; then
-    target_netformat="static"
-    echo
-    echo "3d) Please enter the default gateway IP address of the primary"
-    echo "network interface."
-    while [[ -z ${target_defgw} ]]; do
-        echo
-        echo -n "> "
-        read target_defgw
-        if [[ -z ${target_defgw} ]]; then
-            echo
-            echo "Please enter a default gateway; the installer requires Internet access."
-            continue
-        fi
-        echo
-    done
-else
-    target_netformat="dhcp"
-    echo
-fi
-
-echo -n "Bringing up primary network interface in ${target_netformat} mode... "
-case ${target_netformat} in
-    'static')
-        if [[ -n ${vlan_id} ]]; then
-            modprobe 8021q >&2
-            vconfig add ${target_interface} ${vlan_id} >&2
-            vlan_interface=${target_interface}.${vlan_id}
-            ip link set ${target_interface} up >&2 || true
-            ip link set ${vlan_interface} up >&2 || true
-            ip address add ${target_ipaddr} dev ${vlan_interface} >&2 || true
-            ip route add default via ${target_defgw} >&2 || true
-            formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
-            formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
-            target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device ${target_interface}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
-            real_interface="${vlan_interface}"
+    # Perform DHCP on all interfaces to come online
+    for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
+        ip link set ${interface} up
+        if [[ -n ${seed_vlan} ]]; then
+            vconfig add ${interface} ${seed_vlan}
+            dhclient ${interface}.${seed_vlan}
         else
-            ip link set ${target_interface} up >&2 || true
-            ip address add ${target_ipaddr} dev ${target_interface} >&2 || true
-            ip route add default via ${target_defgw} >&2 || true
-            formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
-            formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
-            target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
-            real_interface="${target_interface}"
+            dhclient ${interface}
         fi
-        cat <<EOF >/etc/resolv.conf
+    done
+
+    # Fetch the seed config
+    tftp -m binary "${seed_host}" -c get "${seed_file}" /tmp/install.seed
+
+    . /tmp/install.seed
+
+    # Handle the target disk
+    if [[ -n ${target_disk_path} ]]; then
+        target_disk="$( readlink ${target_disk_path} )"
+        if [[ ! -b ${target_disk} ]]; then
+            echo "Invalid disk!"
+            exit 1
+        fi
+    else
+        # Find the (first) disk with the given model
+        for disk in /dev/sd?; do
+            disk_model="$( fdisk -l ${disk} | grep 'Disk model:' | sed 's/Disk model: //g' )"
+            if [[ ${disk_model} == ${target_disk_model} ]]; then
+                target_disk="${disk}"
+                break
+            fi
+        done
+    fi
+}
+
+interactive_config() {
+    clear
+    
+    echo "-----------------------------------------------------"
+    echo "| PVC Node installer (${iso_name}) |"
+    echo "-----------------------------------------------------"
+    echo
+    echo "This LiveCD will install a PVC node base system ready for bootstrapping with 'pvc-ansible'."
+    echo
+    echo "* NOTE: If you make a mistake and need to restart the installer while answering"
+    echo "        the questions below, you may do so by typing ^C to cancel the script,"
+    echo "        then re-running it by calling /install.sh in the resulting shell."
+    echo
+    
+    echo "1) Please enter a fully-qualified hostname for the system. This should match the hostname"
+    echo "in the 'pvc-ansible' inventory."
+    while [[ -z ${target_hostname} ]]; do
+        echo
+        echo -n "> "
+        read target_hostname
+        if [[ -z ${target_hostname} ]]; then
+            echo
+            echo "Please enter a hostname."
+            continue
+        fi
+        echo
+    done
+    
+    disks="$(
+        for disk in /dev/sd? /dev/nvme?n?; do
+            if [[ ! -b ${disk} ]]; then
+                continue
+            fi
+            disk_data="$( fdisk -l ${disk} 2>/dev/null )"
+            echo -n "${disk}"
+            echo -en "\t$( grep "^Disk model:" <<<"${disk_data}" | awk '{ $1=""; print $0 }' )"
+            echo -en "  $( grep "^Disk ${disk}:" <<<"${disk_data}" | awk '{ $1=""; $2="size:"; print $0 }' )"
+            echo
+        done
+    )"
+    
+    echo "2) Please enter the disk to install the PVC base system to. This disk will be"
+    echo "wiped, an LVM PV created on it, and the system installed to this LVM."
+    echo "* NOTE: PVC requires a disk of at least 30GB to be installed to, and 100GB is the"
+    echo "recommended minimum size for optimal production partition sizes."
+    echo "* NOTE: For optimal performance, this disk should be high-performance flash (SSD, etc.)."
+    echo "* NOTE: This disk should be a RAID-1 volume configured in hardware, or a durable storage"
+    echo "device, maximum redundancy and resiliency."
+    echo
+    echo "Available disks:"
+    echo
+    echo -e "$( sed 's/\(.*\)/  \1/' <<<"${disks[@]}" )"
+    while [[ ! -b ${target_disk} ]]; do
+        echo
+        echo -n "> "
+        read target_disk
+        if [[ ! -b ${target_disk} ]]; then
+            echo
+            echo "Please enter a valid target disk."
+            continue
+        fi
+        blockdev_size="$(( $( blockdev --getsize64 ${target_disk} ) / 1024 / 1024 / 1024 - 1))"
+        if [[ ${blockdev_size} -lt 30 ]]; then
+            target_disk=""
+            echo
+            echo "The specified disk is too small (<30 GB) to use as a PVC system disk."
+            echo "Please choose an alternative disk."
+            continue
+        fi
+        echo
+    done
+    
+    for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
+        ip link set ${interface} up
+    done
+    sleep 2
+    interfaces="$(
+        ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2"\t"$3 }' | tr -d ':'
+    )"
+    echo "3a) Please enter the primary network interface for external connectivity. If"
+    echo "no entries are shown here, ensure a cable is connected, then restart the"
+    echo "installer with ^C and '/install.sh'."
+    echo
+    echo "Available interfaces:"
+    echo
+    echo -e "$( sed 's/\(.*\)/  \1/' <<<"${interfaces[@]}" )"
+    while [[ -z ${target_interface} ]]; do
+        echo
+        echo -n "> "
+        read target_interface
+        if [[ -z ${target_interface} ]]; then
+            echo
+            echo "Please enter a valid interface."
+            continue
+        fi
+        if ! grep -qw "${target_interface}" <<<"${interfaces[@]}"; then
+            target_interface=""
+            echo
+            echo "Please enter a valid interface."
+            continue
+        fi
+        echo
+    done
+    
+    echo -n "3b) Is a tagged vLAN required for the primary network interface? [y/N] "
+    read vlans_req
+    if [[ ${vlans_req} == 'y' || ${vlans_req} == 'Y' ]]; then
+        echo
+        echo "Please enter the vLAN ID for the interface."
+        while [[ -z ${vlan_id} ]]; do
+            echo
+            echo -n "> "
+            read vlan_id
+            if [[ -z ${vlan_id} ]]; then
+                echo
+                echo "Please enter a numeric vLAN ID."
+                continue
+            fi
+        done
+        echo
+    else
+        vlan_id=""
+        echo
+    fi
+    
+    echo "3c) Please enter the IP address, in CIDR format [X.X.X.X/YY], of the primary"
+    echo "network interface. Leave blank for DHCP configuration of the interface on boot."
+    echo
+    echo -n "> "
+    read target_ipaddr
+    if [[ -n ${target_ipaddr} ]]; then
+        target_netformat="static"
+        echo
+        echo "3d) Please enter the default gateway IP address of the primary"
+        echo "network interface."
+        while [[ -z ${target_defgw} ]]; do
+            echo
+            echo -n "> "
+            read target_defgw
+            if [[ -z ${target_defgw} ]]; then
+                echo
+                echo "Please enter a default gateway; the installer requires Internet access."
+                continue
+            fi
+            echo
+        done
+    else
+        target_netformat="dhcp"
+        echo
+    fi
+    
+    echo -n "Bringing up primary network interface in ${target_netformat} mode... "
+    case ${target_netformat} in
+        'static')
+            if [[ -n ${vlan_id} ]]; then
+                modprobe 8021q >&2
+                vconfig add ${target_interface} ${vlan_id} >&2
+                vlan_interface=${target_interface}.${vlan_id}
+                ip link set ${target_interface} up >&2 || true
+                ip link set ${vlan_interface} up >&2 || true
+                ip address add ${target_ipaddr} dev ${vlan_interface} >&2 || true
+                ip route add default via ${target_defgw} >&2 || true
+                formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
+                formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
+                target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device ${target_interface}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
+                real_interface="${vlan_interface}"
+            else
+                ip link set ${target_interface} up >&2 || true
+                ip address add ${target_ipaddr} dev ${target_interface} >&2 || true
+                ip route add default via ${target_defgw} >&2 || true
+                formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
+                formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
+                target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
+                real_interface="${target_interface}"
+            fi
+            cat <<EOF >/etc/resolv.conf
 nameserver 8.8.8.8
 EOF
-    ;;
-    'dhcp')
-        if [[ -n ${vlan_id} ]]; then
-            modprobe 8021q >&2
-            vconfig add ${target_interface} ${vlan_id} &>/dev/null
-            vlan_interface=${target_interface}.${vlan_id}
-            target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device${target_interface}"
-            dhclient ${vlan_interface} >&2
-            real_interface="${vlan_interface}"
-        else
-            target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}"
-            dhclient ${target_interface} >&2
-            real_interface="${target_interface}"
+        ;;
+        'dhcp')
+            if [[ -n ${vlan_id} ]]; then
+                modprobe 8021q >&2
+                vconfig add ${target_interface} ${vlan_id} &>/dev/null
+                vlan_interface=${target_interface}.${vlan_id}
+                target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device${target_interface}"
+                dhclient ${vlan_interface} >&2
+                real_interface="${vlan_interface}"
+            else
+                target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}"
+                dhclient ${target_interface} >&2
+                real_interface="${target_interface}"
+            fi
+        ;;
+    esac
+    echo "done."
+    echo
+    
+    echo -n "Waiting for networking to become ready... "
+    while ! ping -q -c 1 8.8.8.8 &>/dev/null; do
+        sleep 1
+    done
+    echo "done."
+    echo
+    
+    echo "4a) Please enter an alternate Debian release codename for the system if desired."
+    echo "    Supported: ${supported_debrelease}"
+    echo "    Default: ${default_debrelease}"
+    while [[ -z ${debrelease} ]]; do
+        echo
+        echo -n "> "
+        read debrelease
+        if [[ -z ${debrelease} ]]; then
+            debrelease="${default_debrelease}"
         fi
+        if ! grep -qw "${debrelease}" <<<"${supported_debrelease}"; then
+            debrelease=""
+            echo
+            echo "Please enter a valid release."
+            continue
+        fi
+        echo
+    done
+    
+    echo "4b) Please enter an HTTP URL for an alternate Debian mirror if desired."
+    echo "    Default: ${default_debmirror}"
+    while [[ -z ${debmirror} ]]; do
+        echo
+        echo -n "> "
+        read debmirror
+        if [[ -z ${debmirror} ]]; then
+            debmirror="${default_debmirror}"
+        fi
+        if ! wget -O /dev/null ${debmirror}/dists/${debrelease}/Release &>/dev/null; then
+            debmirror=""
+            echo
+            echo "Please enter a valid Debian mirror URL."
+            continue
+        fi
+        echo
+        echo "Repository mirror '${debmirror}' successfully validated."
+        echo
+    done
+    
+    target_keys_method="wget"
+    echo "5) Please enter an HTTP URL containing a text list of SSH authorized keys to"
+    echo "fetch. These keys will be allowed access to the deployment user 'XXDEPLOYUSER'"
+    echo "via SSH."
+    echo ""
+    echo "Leave blank to bypass this and use a password instead."
+    echo
+    echo -n "> "
+    read target_keys_path
+    if [[ -z ${target_keys_path} ]]; then
+        echo
+        echo "No SSH keys URL specified. Falling back to password configuration."
+        echo
+        echo "5) Please enter a password (hidden), twice, for the deployment user '${target_deploy_user}'."
+        while [[ -z "${target_password}" ]]; do
+            echo
+            echo -n "> "
+            read -s target_password_1
+            echo
+            echo -n "> "
+            read -s target_password_2
+            echo
+            if [[ -n "${target_password_1}" && "${target_password_1}" -eq "${target_password_2}" ]]; then
+                target_password="${target_password_1}"
+            else
+                echo
+                echo "The specified passwords do not match or are empty."
+            fi
+        done
+    else
+        while ! wget -O /dev/null ${target_keys_path} &>/dev/null; do
+            echo
+            echo "Please enter a valid SSH keys URL."
+            echo
+            echo -n "> "
+            read target_keys_path
+        done
+        echo
+        echo "SSH key source '${target_keys_path}' successfully validated."
+    fi
+    echo
+}    
+
+case ${install_option} in
+    on)
+        seed_config
+    ;;
+    *)
+        interactive_config
     ;;
 esac
-echo "done."
-echo
 
-echo -n "Waiting for networking to become ready... "
-while ! ping -q -c 1 8.8.8.8 &>/dev/null; do
-    sleep 1
-done
-echo "done."
-echo
-
-echo "4a) Please enter an alternate Debian release codename for the system if desired."
-echo "    Supported: ${supported_debrelease}"
-echo "    Default: ${default_debrelease}"
-while [[ -z ${debrelease} ]]; do
-    echo
-    echo -n "> "
-    read debrelease
-    if [[ -z ${debrelease} ]]; then
-        debrelease="${default_debrelease}"
-    fi
-    if ! grep -qw "${debrelease}" <<<"${supported_debrelease}"; then
-        debrelease=""
-        echo
-        echo "Please enter a valid release."
-        continue
-    fi
-    echo
-done
-
-echo "4b) Please enter an HTTP URL for an alternate Debian mirror if desired."
-echo "    Default: ${default_debmirror}"
-while [[ -z ${debmirror} ]]; do
-    echo
-    echo -n "> "
-    read debmirror
-    if [[ -z ${debmirror} ]]; then
-        debmirror="${default_debmirror}"
-    fi
-    if ! wget -O /dev/null ${debmirror}/dists/${debrelease}/Release &>/dev/null; then
-        debmirror=""
-        echo
-        echo "Please enter a valid Debian mirror URL."
-        continue
-    fi
-    echo
-    echo "Repository mirror '${debmirror}' successfully validated."
-    echo
-done
-
-echo "5) Please enter an HTTP URL containing a text list of SSH authorized keys to"
-echo "fetch. These keys will be allowed access to the deployment user 'XXDEPLOYUSER'"
-echo "via SSH."
-echo ""
-echo "Leave blank to bypass this and use a password instead."
-echo
-echo -n "> "
-read target_keys_url
-if [[ -z ${target_keys_url} ]]; then
-    echo
-    echo "No SSH keys URL specified. Falling back to password configuration."
-    echo
-    echo "5) Please enter a password (hidden), twice, for the deployment user 'XXDEPLOYUSERXX'."
-    while [[ -z "${target_password}" ]]; do
-        echo
-        echo -n "> "
-        read -s target_password_1
-        echo
-        echo -n "> "
-        read -s target_password_2
-        echo
-        if [[ -n "${target_password_1}" && "${target_password_1}" -eq "${target_password_2}" ]]; then
-            target_password="${target_password_1}"
-        else
-            echo
-            echo "The specified passwords do not match or are empty."
-        fi
-    done
-else
-    while ! wget -O /dev/null ${target_keys_url} &>/dev/null; do
-        echo
-        echo "Please enter a valid SSH keys URL."
-        echo
-        echo -n "> "
-        read target_keys_url
-    done
-    echo
-    echo "SSH key source '${target_keys_url}' successfully validated."
-fi
-echo
 
 titlestring_text="| Proceeding with installation of host '${target_hostname}'. |"
 titlestring_len="$(( $( wc -c <<<"${titlestring_text}" ) - 2 ))"
@@ -313,6 +402,8 @@ echo
 ### Script begins ###
 echo "LOGFILE: ${logfile}"
 echo
+
+exit 0
 
 set -o errexit
 exec 1> >( tee -ia ${logfile} )
@@ -480,14 +571,21 @@ echo "done."
 
 echo -n "Adding deployment user... "
 mv ${target}/home ${target}/var/home >&2
-chroot ${target} useradd -u 200 -d /var/home/XXDEPLOYUSERXX -m -s /bin/bash -g operator -G sudo XXDEPLOYUSERXX >&2
-chroot ${target} mkdir -p /var/home/XXDEPLOYUSERXX/.ssh
-if [[ -n ${target_keys_url} ]]; then
-wget -O ${target}/var/home/XXDEPLOYUSERXX/.ssh/authorized_keys ${target_keys_url}
-chroot ${target} chmod 0600 /var/home/XXDEPLOYUSERXX/.ssh/authorized_keys
-chroot ${target} chown -R XXDEPLOYUSERXX:operator /var/home/XXDEPLOYUSERXX
+chroot ${target} useradd -u 200 -d /var/home/${target_deploy_user} -m -s /bin/bash -g operator -G sudo ${target_deploy_user} >&2
+chroot ${target} mkdir -p /var/home/${target_deploy_user}/.ssh
+if [[ -n ${target_keys_path} ]]; then
+    case ${target_keys_method} in
+        wget)
+            wget -O ${target}/var/home/${target_deploy_user}/.ssh/authorized_keys ${target_keys_path}
+        ;;
+        tftp)
+            tftp -m binary "${seed_host}" -c get "${target_keys_path}" ${target}/var/home/${target_deploy_user}/.ssh/authorized_keys
+        ;;
+    esac
+    chroot ${target} chmod 0600 /var/home/${target_deploy_user}/.ssh/authorized_keys
+    chroot ${target} chown -R ${target_deploy_user}:operator /var/home/${target_deploy_user}
 else
-echo "XXDEPLOYUSERXX:${target_password}" | chroot ${target} chpasswd >&2
+    echo "${target_deploy_user}:${target_password}" | chroot ${target} chpasswd >&2
 fi
 echo "done."
 
