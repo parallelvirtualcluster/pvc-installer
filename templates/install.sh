@@ -852,6 +852,7 @@ host_macaddr=\$( ip -br link show \${target_interface} | awk '{ print \$3 }' )
 host_ipaddr=\$( ip -br address show \${target_interface} | awk '{ print \$3 }' | awk -F '/' '{ print \$1 }' )
 bmc_macaddr=\$( ipmitool lan print | grep 'MAC Address  ' | awk '{ print \$NF }' )
 bmc_ipaddr=\$( ipmitool lan print | grep 'IP Address  ' | awk '{ print \$NF }' )
+
 if [[ -f /etc/pvc-install.hooks ]]; then
     # The third boot, when all hooks have been completed
     action="system-boot_completed"
@@ -862,6 +863,9 @@ else
     # The first boot, when Ansible has not been run yet
     action="system-boot_initial"
 fi
+
+sleep 15
+
 curl -X POST \
     -H "Content-Type: application/json" \
     -d "{\"action\":\"\${action}\",\"hostname\":\"\$( hostname -s )\",\"host_macaddr\":\"\${host_macaddr}\",\"host_ipaddr\":\"\${host_ipaddr}\",\"bmc_macaddr\":\"\${bmc_macaddr}\",\"bmc_ipaddr\":\"\${bmc_ipaddr}\"}" \
