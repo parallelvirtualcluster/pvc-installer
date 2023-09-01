@@ -506,7 +506,7 @@ cleanup() {
     echo "done."
     echo
 
-    if [[ -n ${DONE} ]]; then
+    if [[ -z ${DONE} ]]; then
         case ${install_option} in
             on)
                 echo "A fatal error occurred; rebooting in 10 seconds."
