@@ -222,15 +222,15 @@ echo -n "Creating LVM VG named 'vgx'... "
 yes | vgcreate vgx ${target_disk}3 >&2
 echo "done."
 
-echo -n "Creating root logical volume (16GB)... "
-lvcreate -L 16G -n root vgx >&2
+echo -n "Creating root logical volume (32GB)... "
+lvcreate -L 32G -n root vgx >&2
 echo "done."
 echo -n "Creating filesystem on root logical volume (ext4)... "
 yes | mkfs.ext4 /dev/vgx/root >&2
 echo "done."
 
-echo -n "Creating ceph logical volume (16GB, ext4)... "
-yes | lvcreate -L 16G -n ceph vgx >&2
+echo -n "Creating ceph logical volume (8GB, ext4)... "
+yes | lvcreate -L 8G -n ceph vgx >&2
 echo "done."
 echo -n "Creating filesystem on ceph logical volume (ext4)... "
 mkfs.ext4 /dev/vgx/ceph >&2
