@@ -133,9 +133,24 @@ seed_config() {
     # Fetch the seed config
     tftp -m binary "${seed_host}" -c get "${seed_file}" /tmp/install.seed
 
+    # Load the variables from the seed config
     . /tmp/install.seed || exit 1
 
-    if [[ -n "${addpkglist}" ]]; then
+    # Ensure optional configurations are set to defaults if unset
+    if [[ -z ${filesystem} ]]; then
+        filesystem="${default_filesystem}"
+    fi
+
+    if [[ -z ${debrelease} ]]; then
+        debrelease="${default_debrelease}"
+    fi
+
+    if [[ -z ${debmirror} ]]; then
+        debmirror="${default_debmirror}"
+    fi
+
+    # Append the addpkglist to the suppkglist if present
+    if [[ -n ${addpkglist} ]]; then
         suppkglist="${suppkglist},${addpkglist}"
     fi
 

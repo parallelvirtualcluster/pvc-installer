@@ -11,18 +11,28 @@
 ### General definitions/overrides
 ###
 
+{% if debrelease is defined and debrelease %}
 # The Debian release to use (overrides the default)
 #debrelease="buster"
 debrelease="{debrelease}"
+{% endif %}
 
+{% if debmirror is defined and debmirror %}
 # The Debian mirror to use (overrides the default)
 #debmirror="http://debian.mirror.rafal.ca/debian"
 debmirror="{debmirror}"
+{% endif %}
 
 {% if addpkglist is defined and addpkglist %}
 # Additional packages (comma-separated) to install in the base system
 #addpkglist="mypackage,otherpackage"
 addpkglist="{addpkglist}"
+{% endif %}
+
+{% if filesystem is defined and filesystem %}
+# Alternate filesystem for system volumes (/, /var/lib/ceph, /var/lib/zookeeper)
+#filesystem=ext4
+filesystem="{filesystem}"
 {% endif %}
 
 {% if skip_blockcheck is defined and skip_blockcheck %}
