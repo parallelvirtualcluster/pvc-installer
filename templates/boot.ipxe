@@ -20,5 +20,5 @@ set submenu-default pvc-installer
 :pvc-installer
 kernel ${root-url}/vmlinuz
 initrd ${root-url}/initrd.img
-imgargs vmlinuz ${imgargs-host} ${imgargs-base} ${imgargs-pvcinstall}
+imgargs vmlinuz initrd=initrd.img ${imgargs-host} ${imgargs-base} ${imgargs-pvcinstall}
 boot
