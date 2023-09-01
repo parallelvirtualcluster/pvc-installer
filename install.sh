@@ -8,7 +8,7 @@ fi
 logfile="/tmp/pvc-install.log"
 debrelease="buster"
 debmirror="http://debian.mirror.rafal.ca/debian"
-debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python2,python3"
+debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python,python2,python3"
 
 clear
 
