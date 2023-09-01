@@ -66,12 +66,6 @@ suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,n
 # roles will overwrite it by default during configuration.
 root_password="hCb1y2PF"
 
-# Respawn function
-respawn() (
-    echo "Respawning..."
-    $0 & disown
-)
-
 # Checkin function
 seed_checkin() (
     case ${1} in
@@ -189,7 +183,7 @@ interactive_config() {
         done
     )"
 
-    echo "2) Please enter the disk to install the PVC base system to. This disk will be"
+    echo "2a) Please enter the disk to install the PVC base system to. This disk will be"
     echo "wiped, an LVM PV created on it, and the system installed to this LVM."
     echo "* NOTE: PVC requires a disk of at least 30GB to be installed to, and 100GB is the"
     echo "recommended minimum size for optimal production partition sizes."
@@ -219,6 +213,16 @@ interactive_config() {
         fi
         echo
     done
+
+    echo "2b) Skip disk zeroing? Only recommended for slow, low-endurance, or known-"
+    echo -n "zeroed block devices. [y/N] "
+    read skip_blockcheck
+    if [[ ${skip_blockcheck} == 'y' || ${skip_blockcheck} == 'Y' ]]; then
+        skip_blockcheck="y"
+    else
+        skip_blockcheck=""
+    fi
+    echo
 
     for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
         ip link set ${interface} up
@@ -489,15 +493,19 @@ cleanup() {
     echo "done."
     echo
 
-    case ${install_option} in
-        on)
-            respawn
-        ;;
-        *)
-            # noop
-            true
-        ;;
-    esac
+    if [[ -n ${DONE} ]]; then
+        case ${install_option} in
+            on)
+                echo "A fatal error occurred; rebooting in 10 seconds."
+                sleep 10
+                reboot
+            ;;
+            *)
+                # noop
+                true
+            ;;
+        esac
+    fi
 }
 trap cleanup EXIT
 
@@ -525,8 +533,8 @@ vgchange -an >&2 || true
 echo "done."
 
 blockcheck() {
-    # Use for testing only
-    if [[ -n ${SKIP_BLOCKCHECK} ]]; then
+    # Skip checking if the key is set
+    if [[ -n ${skip_blockcheck} ]]; then
         return
     fi
 
@@ -833,19 +841,15 @@ chroot ${target} grub-install --force --target=${bios_target} ${target_disk} >&2
 chroot ${target} grub-mkconfig -o /boot/grub/grub.cfg >&2
 echo "done."
 
+DONE="y"
+
 seed_postinst() {
     cleanup
     echo "Temporary root password: ${root_password}"
     seed_checkin end
 
-    echo -n "Rebooting in 10 seconds..."
-    i=10
-    while [[ ${i} -gt 0 ]]; do
-        sleep 1
-        i=$(( ${1} - 1 ))
-        echo -n "."
-    done
-    echo
+    echo "Rebooting in 10 seconds."
+    sleep 10
     reboot
 }
 
