@@ -122,6 +122,7 @@ prepare_rootfs() {
     sudo sed -i 's|/sbin/agetty|/sbin/agetty --autologin root|g' \
          ${tempdir}/rootfs/etc/systemd/system/getty@tty1.service &>/dev/null || fail "Error setting autologin in getty override."
     sudo tee ${tempdir}/rootfs/etc/hostname <<<"pvc-node-installer" &>/dev/null || fail "Error setting hostname."
+    sudo tee ${tempdir}/rootfs/etc/resolv.conf <<<"nameserver 8.8.8.8" &>/dev/null || fail "Error setting resolv.conf"
     sudo tee -a ${tempdir}/rootfs/root/.bashrc <<<"/install.sh" &>/dev/null || fail "Error setting bashrc."
     sudo chroot ${tempdir}/rootfs/ /usr/bin/passwd -d root &>/dev/null || fail "Error disabling root password."
 	sudo cp install.sh ${tempdir}/rootfs/ &>/dev/null || fail "Error copying install.sh to tempdir."
