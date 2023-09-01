@@ -79,7 +79,7 @@ prepare_rootfs() {
     if [[ ! -f filesystem.squashfs ]]; then
         sudo nice mksquashfs ${tempdir}/rootfs/ filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
     fi
-    cp filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
+    sudo cp filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
     echo "done."
 }
 
