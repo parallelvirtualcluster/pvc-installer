@@ -19,22 +19,22 @@ debrelease="{{ debrelease }}"
 {%- if debmirror is defined and debmirror %}
 # The Debian mirror to use (overrides the default)
 debmirror="{{ debmirror }}"
-{%- endif %}
+{% endif %}
 
 {%- if addpkglist is defined and addpkglist %}
 # Additional packages (comma-separated) to install in the base system
 addpkglist="{{ addpkglist }}"
-{%- endif %}
+{% endif %}
 
 {%- if filesystem is defined and filesystem %}
 # Alternate filesystem for system volumes (/, /var/lib/ceph, /var/lib/zookeeper)
 filesystem="{{ filesystem }}"
-{%- endif %}
+{% endif %}
 
 {%- if skip_blockcheck is defined and skip_blockcheck %}
 # Skip block zeroing; only recommended for testing, slow, low-endurance, or known-zeroed block devices.
 skip_blockcheck="y"
-{%- endif %}
+{% endif %}
 
 ###
 ### Per-host definitions (required)
