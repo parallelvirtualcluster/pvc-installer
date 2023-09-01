@@ -659,6 +659,7 @@ EOF
     echo "4c) Please enter any additional packages, comma-separated without spaces,"
     echo "that you require installed in the base system (firmware, etc.). These"
     echo "must be valid packages or the install will fail!"
+    echo
     echo -n "> "
     read addpkglist
     echo
