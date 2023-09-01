@@ -782,6 +782,11 @@ echo "deb ${debmirror} ${debrelease} contrib non-free" | tee -a ${target}/etc/ap
 chroot ${target} apt-get update >&2
 echo "done."
 
+# python-is-python3 is critical for bullsye
+if [[ ${debrelease} != "buster" ]]; then
+    suppkglist="python-is-python3,${suppkglist}"
+fi
+
 echo -n "Installing supplemental packages... "
 chroot ${target} apt-get install -y --no-install-recommends $( sed 's/,/ /g' <<<"${suppkglist}" ) >&2
 echo "done."
