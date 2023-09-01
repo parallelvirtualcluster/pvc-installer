@@ -863,11 +863,8 @@ host_ipaddr=\$( ip -br address show \${target_interface} | awk '{ print \$3 }' |
 bmc_macaddr=\$( ipmitool lan print | grep 'MAC Address  ' | awk '{ print \$NF }' )
 bmc_ipaddr=\$( ipmitool lan print | grep 'IP Address  ' | awk '{ print \$NF }' )
 
-if [[ -f /etc/pvc-install.hooks ]]; then
-    # The third boot, when all hooks have been completed
-    action="system-boot_completed"
-elif [[ -f /etc/pvc-install.base && -f /etc/pvc-install.pvc ]]; then
-    # The second boot, when Ansible has configured the cluster
+if [[ -f /etc/pvc-install.base && -f /etc/pvc-install.pvc ]]; then
+    # The second boot, after Ansible has configured the cluster
     action="system-boot_configured"
 else
     # The first boot, when Ansible has not been run yet
@@ -881,7 +878,7 @@ curl -X POST \
     -d "{\"action\":\"\${action}\",\"hostname\":\"\$( hostname -s )\",\"host_macaddr\":\"\${host_macaddr}\",\"host_ipaddr\":\"\${host_ipaddr}\",\"bmc_macaddr\":\"\${bmc_macaddr}\",\"bmc_ipaddr\":\"\${bmc_ipaddr}\"}" \
     \${pvcbootstrapd_checkin_uri}
 
-if [[ \${action} == "system-boot_completed" ]]; then
+if [[ \${action} == "system-boot_configured" ]]; then
     # Clean up the bootstrap interface and this script
     rm /etc/network/interfaces.d/\${target_interface}
     rm \$0
