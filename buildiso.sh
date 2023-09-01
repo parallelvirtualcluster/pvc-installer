@@ -84,10 +84,11 @@ echo "done."
 # Add root password hook
 echo -n "Copying live-boot templates... "
 mkdir -p config/includes.chroot/lib/live/boot/
-cp ../../templates/2000-remove-root-pw.sh config/includes.chroot/lib/live/boot/2000-remove-root-pw.sh || fail "Failed to copy critical template file"
-chmod +x config/includes.chroot/lib/live/boot/2000-remove-root-pw.sh || fail "Failed to copy critical template file"
 cp ../../templates/9990-initramfs-tools.sh config/includes.chroot/lib/live/boot/9990-initramfs-tools.sh || fail "Failed to copy critical template file"
 chmod +x config/includes.chroot/lib/live/boot/9990-initramfs-tools.sh || fail "Failed to copy critical template file"
+mkdir -p config/includes.chroot/lib/live/config/
+cp ../../templates/2000-remove-root-pw.sh config/includes.chroot/lib/live/config/2000-remove-root-pw.sh || fail "Failed to copy critical template file"
+chmod +x config/includes.chroot/lib/live/config/2000-remove-root-pw.sh || fail "Failed to copy critical template file"
 echo "done."
 
 # Set root bashrc
