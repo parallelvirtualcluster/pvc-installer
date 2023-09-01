@@ -68,7 +68,7 @@ while getopts "h?o:s:au:" opt; do
 done
 
 srcliveisopath="https://cdimage.debian.org/mirror/cdimage/release/current-live/amd64/iso-hybrid"
-srcliveisofilename="$( wget -O- ${srcliveisopath}/ | grep 'debian-live-.*-amd64-standard.iso' | awk -F '"' '{ print $6 }' )"
+srcliveisofilename="$( wget -O- ${srcliveisopath}/ 2>/dev/null | grep 'debian-live-.*-amd64-standard.iso' | awk -F '"' '{ print $6 }' )"
 srcliveisourl="${srcliveisopath}/${srcliveisofilename}"
 srcliveisofile="$( basename ${srcliveisourl} )"
 
@@ -95,10 +95,12 @@ prepare_iso() {
     mkdir ${tempdir}/rootfs/ ${tempdir}/installer/ &>/dev/null || fail "Error creating temporary directories."
     echo "done."
 
+    echo -n "Downloading Debian Live ISO... "
     if [[ ! -f artifacts/${srcliveisofile} ]]; then
-        echo -n "Downloading Debian Live ISO... "
         wget -O artifacts/${srcliveisofile} ${srcliveisourl} &>/dev/null || { rm -f artifacts/${srcliveisofile}; fail "Error downloading source ISO."; }
         echo "done."
+    else
+        echo "using cached file 'artifacts/${srcliveisofile}'."
     fi
 
     echo -n "Extracting Debian Live ISO files... "
@@ -132,9 +134,12 @@ prepare_rootfs() {
         else
             sudo umount artifacts/debootstrap/var/cache/apt/archives &>/dev/null
         fi
+        sudo rsync -au artifacts/debootstrap/ ${tempdir}/rootfs/ &>/dev/null || fail "Error copying debootstrap to tempdir."
+        echo "done."
+    else
+        sudo rsync -au artifacts/debootstrap/ ${tempdir}/rootfs/ &>/dev/null || fail "Error copying debootstrap to tempdir."
+        echo "using cached debootstrap 'artifacts/debootstrap'."
     fi
-    sudo rsync -au artifacts/debootstrap/ ${tempdir}/rootfs/ &>/dev/null || fail "Error copying debootstrap to tempdir."
-    echo "done."
    
     echo -n "Configuring Debian live installation... "
     sudo cp -a artifacts/debootstrap/boot/vmlinuz* ${tempdir}/installer/live/vmlinuz &>/dev/null || fail "Error copying kernel."
@@ -157,9 +162,12 @@ prepare_rootfs() {
             rm -f artifacts/filesystem.squashfs &>/dev/null
         fi
         sudo nice mksquashfs ${tempdir}/rootfs/ artifacts/filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
+        sudo rsync -a artifacts/filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
+        echo "done."
+    else
+        sudo rsync -a artifacts/filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
+        echo "using cached squashfs 'artifacts/filesystem.squashfs'."
     fi
-    sudo rsync -a artifacts/filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
-    echo "done."
 }
 
 build_iso() {
@@ -195,7 +203,7 @@ build_iso() {
     echo "done."
 
     echo -n "Moving generated ISO to './${isofilename}'... "
-    mv ${tempdir}/${isofilename} ${isofilename} &>/dev/null || fail "Error moving ISO file."
+    mv -f ${tempdir}/${isofilename} ${isofilename} &>/dev/null || fail "Error moving ISO file."
     echo "done."
 }
 
