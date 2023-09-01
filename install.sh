@@ -361,10 +361,7 @@ echo "--------------------------------------------------------------------------
 echo "| PVC node installation finished. Next steps:                                       |"
 echo "| 1. Press <enter> to reboot the system.                                            |"
 echo "| 2. Boot the PVC base hypervisor and verify SSH access (IP shown on login screen). |"
-echo "| 3. Configure /etc/network/interfaces to the cluster specifications. Optionally,   |"
-echo "|    remove the static or DHCP specification of the primary interface; the daemon   |"
-echo "|    manages this automatically if not present.                                     |"
-echo "| 4. Proceed with system deployment via PVC Ansible.                                |"
+echo "| 3. Proceed with system deployment via PVC Ansible.                                |"
 echo "-------------------------------------------------------------------------------------"
 echo
 read
