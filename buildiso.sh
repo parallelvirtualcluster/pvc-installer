@@ -117,7 +117,7 @@ lb config \
        --distribution bullseye \
        --archive-areas "main contrib non-free" \
        --mirror-bootstrap "${mirror_server}/debian" \
-       --mirror-chroot-security "${mirror_server}/debian-security" \
+       --mirror-chroot-security "http://security.debian.org/debian-security" \
        --debconf-frontend readline \
        --apt-recommends false \
        ${arch_config_append} || fail "Failed to initialize live-build config"
