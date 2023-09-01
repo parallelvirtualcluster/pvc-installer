@@ -1136,7 +1136,8 @@ seed_postinst() {
 
     echo "Rebooting in 10 seconds."
     sleep 10
-    reboot
+    sync
+    reboot -f
 }
 
 interactive_postinst() {
@@ -1162,7 +1163,8 @@ interactive_postinst() {
     echo
     read
 
-    reboot
+    sync
+    reboot -f
 }
 
 case ${install_option} in
