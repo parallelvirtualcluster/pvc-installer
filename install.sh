@@ -67,7 +67,7 @@ for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk
 done
 sleep 2
 interfaces="$(
-    ip address | grep '^[0-9]' | grep 'enp\|ens\|wlp' | awk '{ print $2"\t"$3 }' | tr -d ':'
+    ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2"\t"$3 }' | tr -d ':'
 )"
 echo "3a) Please enter the primary network interface for external connectivity. If"
 echo "    no entries are shown here, ensure a cable is connected, then restart the"
