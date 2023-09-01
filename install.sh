@@ -22,9 +22,9 @@ root_password="hCb1y2PF"
 
 clear
 
-echo "-----------------------------------------------------"
-echo "| PVC Node installer (XXISOXX) |"
-echo "-----------------------------------------------------"
+echo "--------------------------------------------------------"
+echo "| PVC Node installer (XXDATEXX) |"
+echo "--------------------------------------------------------"
 echo
 echo "This LiveCD will install a PVC node base system ready for bootstrapping with 'pvc-ansible'."
 echo
