@@ -78,7 +78,7 @@ default_debmirror="http://debian.mirror.rafal.ca/debian"
 # Base packages (installed by debootstrap)
 basepkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
 # Supplemental packages (installed in chroot after debootstrap)
-suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp,ipmitool,acpid,acpi-support-base"
+suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp,ipmitool,acpid,acpi-support-base,lsscsi"
 
 # Modules to blacklist (known-faulty)
 target_module_blacklist=( "hpwdt" )
