@@ -7,14 +7,48 @@
 # using a standard Debian intaller ISO. The end system is suitable
 # for immediate bootstrapping with the PVC Ansible roles.
 
-isofilename="pvc-installer.iso"
-
-srcliveisofile="debian-live-buster-DI-rc1-amd64-standard.iso"
-srcliveisourl="https://cdimage.debian.org/mirror/cdimage/buster_di_rc1-live/amd64/iso-hybrid/${srcliveisofile}"
-
 which debootstrap &>/dev/null || fail "This script requires debootstrap."
 which mksquashfs &>/dev/null || fail "This script requires squashfs."
 which xorriso &>/dev/null || fail "This script requires xorriso."
+
+isofilename="pvc-installer.iso"
+srcliveisourl="https://cdimage.debian.org/mirror/cdimage/buster_di_rc1-live/amd64/iso-hybrid/debian-live-buster-DI-rc1-amd64-standard.iso"
+
+show_help() {
+	echo -e "PVC install ISO generator"
+    echo
+    echo -e " Generates a mostly-automated installer ISO for a PVC node base system. The ISO"
+    echo -e " boots, then runs 'install.sh' to perform the installation to a target server."
+    echo -e " This script prompts for a few questions on startup to configure the system, then"
+    echo -e " performs the remaining installation to PVC node specifications unattended,"
+    echo -e " including configuring networking on the selected interface, wiping the selected"
+    echo -e " disk, partitioning, installing the base OS, and performing some initial"
+    echo -e " configuration to allow the PVC Ansible role to take over after completion."
+    echo
+    echo -e "Usage: $0 [-h] [-o <output_filename>] [-s <liveiso_source_url>]"
+    echo
+    echo -e "   -h: Display this help message."
+    echo -e "   -o: Create the ISO as <output_filename> instead of the default."
+    echo -e "   -s: Obtain the source Debian Live ISO from <liveiso_source_url> instead of"
+    echo -e "       the default."
+}
+
+while getopts "h?o:s:" opt; do
+    case "$opt" in
+        h|\?)
+            show_help
+            exit 0
+        ;;
+        o)
+        	isofilename=$OPTARG
+        ;;
+		s)
+			srcliveisourl=$OPTARG
+		;;
+    esac
+done
+
+srcliveisofile="$( basename ${srcliveisourl} )"
 
 tempdir=$( mktemp -d )
 
@@ -33,20 +67,20 @@ fail() {
 
 prepare_iso() {
     echo -n "Creating temporary directories... "
-    mkdir ${tempdir}/rootfs/ ${tempdir}/installer/ || fail "Error creating temporary directories."
+    mkdir ${tempdir}/rootfs/ ${tempdir}/installer/ &>/dev/null || fail "Error creating temporary directories."
     echo "done."
 
     if [[ ! -f ${srcliveisofile} ]]; then
-        echo -n "Downloading Debian LiveISO... "
-        wget -O ${srcliveisofile} ${srcliveisourl}
+        echo -n "Downloading Debian Live ISO... "
+        wget -O ${srcliveisofile} ${srcliveisourl} &>/dev/null || fail "Error downloading source ISO."
         echo "done."
     fi
 
-    echo -n "Extracting Debian LiveISO files... "
+    echo -n "Extracting Debian Live ISO files... "
     iso_tempdir=$( mktemp -d )
-    sudo mount ${srcliveisofile} ${iso_tempdir} &>/dev/null || fail "Error mounting LiveISO file."
-	sudo rsync -au --exclude live/filesystem.squashfs ${iso_tempdir}/ ${tempdir}/installer/ &>/dev/null || fail "Error extracting LiveISO files."
-    sudo umount ${iso_tempdir} &>/dev/null || fail "Error unmounting LiveISO file."
+    sudo mount ${srcliveisofile} ${iso_tempdir} &>/dev/null || fail "Error mounting Live ISO file."
+	sudo rsync -au --exclude live/filesystem.squashfs ${iso_tempdir}/ ${tempdir}/installer/ &>/dev/null || fail "Error extracting Live ISO files."
+    sudo umount ${iso_tempdir} &>/dev/null || fail "Error unmounting Live ISO file."
     rmdir ${iso_tempdir} &>/dev/null
     echo "done."
 }
@@ -115,13 +149,14 @@ build_iso() {
     echo "done."
 }
 
-pushd artifacts/
+[[ -d artifacts ]] || mkdir artifacts &>/dev/null | fail "Error creating artifacts directory."
+pushd artifacts &>/dev/null
 
 prepare_iso
 prepare_rootfs
 build_iso
 cleanup
 
-popd
+popd &>/dev/null
 
 echo "PVC Live Installer ISO generation complete."
