@@ -1,1 +1,1 @@
-live-task-standard live-tools live-boot live-boot-initramfs-tools linux-image-amd64 psmisc mdadm lvm2 parted gdisk dosfstools debootstrap grub-pc-bin grub-efi-amd64 sipcalc vim ca-certificates vlan tftp-hpa curl ipmitool
+live-task-standard live-tools live-boot live-boot-initramfs-tools linux-image-amd64 psmisc mdadm lvm2 parted gdisk dosfstools debootstrap grub-pc-bin grub-efi-amd64 sipcalc vim ca-certificates vlan tftp-hpa curl ipmitool lsscsi
