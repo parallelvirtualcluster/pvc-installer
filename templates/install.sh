@@ -211,18 +211,63 @@ seed_config() {
     host_ipaddr=$( ip -br address show ${target_interface} | awk '{ print $3 }' | awk -F '/' '{ print $1 }' )
 
     # Handle the target disk
-    if [[ -n ${target_disk_path} ]]; then
-        target_disk="$( realpath ${target_disk_path} )"
-    else
-        # Find the (first) disk with the given model
-        for disk in /dev/sd?; do
-            disk_model="$( fdisk -l ${disk} | grep 'Disk model:' | sed 's/Disk model: //g' )"
-            if [[ ${disk_model} == ${target_disk_model} ]]; then
-                target_disk="${disk}"
-                break
-            fi
-        done
-    fi
+    case "${target_disk}" in
+        /dev/*)
+            # Get the real path of the block device (for /dev/disk/* symlink paths)
+            target_disk="$( realpath ${target_disk} )"
+        ;;
+        detect:*)
+            # Read the detect string into separate variables
+            # A detect string is formated thusly:
+            #   detect:<Controller-or-Vendor-Name>:<0-indexed-ID>:<Capacity-in-human-units>
+            # For example:
+            #   detect:INTEL:1:800GB
+            #   detect:DELLBOSS:0:240GB
+            #   detect:PERC H330 Mini:0:200GB
+            IFS=: read detect b_name b_id b_size <<<"${target_disk}"
+            # Get the lsscsi output (exclude NVMe)
+            lsscsi_data_all="$( lsscsi -s -N )"
+            # Get the available sizes, and match to within +/- 2%
+            lsscsi_sizes=( $( awk '{ print $NF }' <<<"${lsscsi_data_all}" | sort | uniq ) )
+            # For each size...
+            for size in ${lsscsi_sizes[@]}; do
+                # Get whether we match +2% and -2% sizes to handle human -> real deltas
+                # The break below is pretty safe. I can think of no two classes of disks
+                # where the difference is within 2% of each other. Even the common
+                # 120GB -> 128GB and 240GB -> 256GB size deltas are well outside of 2%,
+                # so this should be safe in all cases. 1% would be narrower but has more
+                # chance of mis-identifying due to rounding, while 3% gets into more
+                # contentious differences, so 2% seems like the best option.
+                # We use Python for this due to BASH's problematic handling of floating-
+                # point numbers.
+                is_match="$(
+                    python <<EOF
+from re import sub
+b_size = float(sub(r'\D','','${b_size}'))
+t_size = float(sub(r'\D','','${size}'))
+plustwopct = t_size * 1.02
+minustwopct = t_size * 0.98
+if b_size > minustwopct and b_size < plustwopct:
+    print("match")
+EOF
+                )"
+                # If we do, this size is our actual block size, not what was specified
+                if [[ -n ${is_match} ]]; then
+                    b_size=${size}
+                    break
+                fi
+            done
+            # Search for the b_name first
+            lsscsi_data_name="$( grep --color=none -Fiw "${b_name}" <<<"${lsscsi_data_all}" )"
+            # Search for the b_blocks second
+            lsscsi_data_name_size="$( grep --color=none -Fiw "${b_size}" <<<"${lsscsi_data_name}" )"
+            # Read the /dev/X results into an array
+            lsscsi_filtered=( $( awk '{ print $(NF-1) }' <<<"${lsscsi_data_name_size}" ) )
+            # Get the b_id-th entry
+            target_disk="${lsscsi_filtered[${b_id}]}"
+        ;;
+    esac
+
     if [[ ! -b ${target_disk} ]]; then
         echo "Invalid disk or disk not found!"
         exit 1
