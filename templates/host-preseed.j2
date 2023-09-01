@@ -11,53 +11,40 @@
 ### General definitions/overrides
 ###
 
-{% if debrelease is defined and debrelease %}
+{%- if debrelease is defined and debrelease %}
 # The Debian release to use (overrides the default)
-#debrelease="buster"
-debrelease="{debrelease}"
+debrelease="{{ debrelease }}"
 {% endif %}
 
-{% if debmirror is defined and debmirror %}
+{%- if debmirror is defined and debmirror %}
 # The Debian mirror to use (overrides the default)
-#debmirror="http://debian.mirror.rafal.ca/debian"
-debmirror="{debmirror}"
-{% endif %}
+debmirror="{{ debmirror }}"
+{%- endif %}
 
-{% if addpkglist is defined and addpkglist %}
+{%- if addpkglist is defined and addpkglist %}
 # Additional packages (comma-separated) to install in the base system
-#addpkglist="mypackage,otherpackage"
-addpkglist="{addpkglist}"
-{% endif %}
+addpkglist="{{ addpkglist }}"
+{%- endif %}
 
-{% if filesystem is defined and filesystem %}
+{%- if filesystem is defined and filesystem %}
 # Alternate filesystem for system volumes (/, /var/lib/ceph, /var/lib/zookeeper)
-#filesystem=ext4
-filesystem="{filesystem}"
-{% endif %}
+filesystem="{{ filesystem }}"
+{%- endif %}
 
-{% if skip_blockcheck is defined and skip_blockcheck %}
+{%- if skip_blockcheck is defined and skip_blockcheck %}
 # Skip block zeroing; only recommended for testing, slow, low-endurance, or known-zeroed block devices.
 skip_blockcheck="y"
-{% endif %}
+{%- endif %}
 
 ###
 ### Per-host definitions (required)
 ###
 
 # The hostname of the system (set per-run)
-#target_hostname="myhostname.domain.tld"
-target_hostname="{hostname}"
+target_hostname="{{ fqdn }}"
 
-# The target system disk (either a path or model to find; path overrides model if set)
-# Install will fail if these devices aren't found.
-{% if target_disk_path is defined and target_disk_path %}
-#target_disk_path="/dev/disk/by-path/pci-0000:03:00.0-scsi-0:1:0:0"  # Example: RAID device via explicit path
-target_disk_path="{target_disk_path}"
-{% end if %}
-{% if target_disk_model is defined and target_disk_model %}
-#target_disk_model="DELLBOSS VD"                                     # Example: Dell BOSS on R6515 via model name
-target_disk_model="{target_disk_model}"
-{% end if %}
+# The target system disk path
+target_disk="{{ target_disk }}"
 
 # SSH key method (usually tftp)
 target_keys_method="tftp"
@@ -80,5 +67,4 @@ target_deploy_user="deploy"
 #target_module_blacklist=( "hpwdt" )
 
 # Installer checkin URI (provided by pvcbootstrapd)
-#pvcbootstrapd_checkin_uri="http://10.199.199.254:9999/checkin/host"
-pvcbootstrapd_checkin_uri="{pvcbootstrapd_checkin_uri}"
+pvcbootstrapd_checkin_uri="{{ pvcbootstrapd_checkin_uri }}"

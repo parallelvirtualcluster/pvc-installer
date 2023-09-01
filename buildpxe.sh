@@ -124,8 +124,9 @@ build_pxe() {
     cp templates/boot.ipxe ${outputdir}/boot.ipxe
     echo "done."
 
-    echo -n "Copying preseed template... "
+    echo -n "Copying jinja2 templates... "
     cp templates/host-preseed.j2 ${outputdir}/host-preseed.j2
+    cp templates/host-ipxe.j2 ${outputdir}/host-ipxe.j2
     echo "done."
 
     sudo chown -R $(whoami) ${outputdir}
