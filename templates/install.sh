@@ -180,6 +180,14 @@ seed_config() {
         echo "Invalid disk or disk not found!"
         exit 1
     fi
+
+    echo
+    echo "WARNING! All data on block device ${target_disk} will be wiped!"
+    echo -n "Press any key within 15 seconds to cancel... "
+    if read -t 15; then
+        exit 0
+    fi
+    echo
 }
 
 interactive_config() {
