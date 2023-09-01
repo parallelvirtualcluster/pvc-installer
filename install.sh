@@ -6,6 +6,7 @@ if [[ $( whoami ) != "root" ]]; then
     exit 1
 fi
 
+logfile="/tmp/pvc-install.log"
 iso_name="XXDATEXX"
 target_deploy_user="XXDEPLOYUSERXX"
 
@@ -14,6 +15,7 @@ default_debrelease="buster"
 default_debmirror="http://debian.mirror.rafal.ca/debian"
 
 debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,gpg,gpg-agent,aptitude,openssh-server,vlan,ifenslave,python2,python3,ca-certificates,ntp"
+exclpkglist="systemd-timesyncd"
 suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x"
 
 # DANGER - THIS PASSWORD IS PUBLIC
@@ -34,7 +36,6 @@ install_option="$( awk '{
 }' <<<"${kernel_cmdline}" | awk -F'=' '{ print $NF }' )"
 
 seed_config() {
-    echo "Hello ${1}"
     seed_host="$( awk '{
         for(i=1; i<=NF; i++) {
             if($i ~ /pvcinstall.seed_host=/) {
@@ -141,8 +142,8 @@ interactive_config() {
             echo "Please enter a valid target disk."
             continue
         fi
-        blockdev_size="$(( $( blockdev --getsize64 ${target_disk} ) / 1024 / 1024 / 1024 - 1))"
-        if [[ ${blockdev_size} -lt 30 ]]; then
+        blockdev_size_gbytes="$(( $( blockdev --getsize64 ${target_disk} ) / 1024 / 1024 / 1024 - 1))"
+        if [[ ${blockdev_size_gbytes} -lt 30 ]]; then
             target_disk=""
             echo
             echo "The specified disk is too small (<30 GB) to use as a PVC system disk."
@@ -394,6 +395,7 @@ exec 2> >( tee -ia ${logfile} >/dev/null )
 cleanup() {
     set +o errexit
     echo -n "Cleaning up... "
+    umount ${target}/tmp >&2
     umount ${target}/run >&2
     umount ${target}/sys >&2
     umount ${target}/proc >&2
@@ -411,31 +413,58 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo -n "Determining block device and partition sizing... "
-blockdev_size="$(( $( blockdev --getsize64 ${target_disk} ) / 1024 / 1024 / 1024 - 1))"
-if [[ ${blockdev_size} -ge 100 ]]; then
+echo -n "Determining partition sizes... "
+blockdev_size_bytes="$( blockdev --getsize64 ${target_disk} )"
+blockdev_size_gbytes="$(( ${blockdev_size_bytes} / 1024 / 1024 / 1024 - 1))"
+if [[ ${blockdev_size_gbytes} -ge 100 ]]; then
     # Optimal sized system disk (>=100GB), use large partitions
     size_root_lv="32"
     size_ceph_lv="8"
     size_zookeeper_lv="32"
     size_swap_lv="16"
-    echo "found large disk (>=100GB), using optimal partition sizes."
-elif [[ ${blockdev_size} -ge 30 ]]; then
+    echo "found large disk (${blockdev_size_gbytes} >= 100GB), using optimal partition sizes."
+else
     # Minimum sized disk (>=30GB), use small partitions
     size_root_lv="8"
     size_ceph_lv="4"
     size_zookeeper_lv="8"
     size_swap_lv="8"
-    echo "found small disk (>=30GB), using small partition sizes."
+    echo "found small disk (${blockdev_size_gbytes} < 100GB), using small partition sizes."
 fi
 
 echo -n "Disabing existing volume groups... "
 vgchange -an >&2 || true
 echo "done."
 
-echo -n "Zeroing block device '${target_disk}'... "
-dd if=/dev/zero of=${target_disk} bs=4M >&2 || true
-echo "done."
+blockcheck() {
+    # Use for testing only
+    if [[ -n ${SKIP_BLOCKCHECK} ]]; then
+        return
+    fi
+
+    # Determine optimal block size for zeroing
+    exponent=16
+    remainder=1
+    while [[ ${remainder} -gt 0 && ${exponent} -gt 0 ]]; do
+        exponent=$(( ${exponent} - 1 ))
+        size=$(( 2**9 * 2 ** ${exponent} ))
+        count=$(( ${blockdev_size_bytes} / ${blocksize} ))
+        remainder=$(( ${blockdev_size_bytes} - ${count} * ${size} ))
+    done
+    if [[ ${remainder} -gt 0 ]]; then
+        echo "Failed to find a suitable block size for wiping... skipping."
+        return
+    fi
+
+    echo -n "Checking if block device '${target_disk}' is already wiped... "
+    if ! cmp --silent --bytes ${blockdev_size_bytes} /dev/zero ${target_disk}; then
+        echo "false."
+        echo -n "Wiping block device '${target_disk}' (${count} blocks of ${size} bytes)... "
+        dd if=/dev/zero of=${target_disk} bs=${size} count=${count} oflag=direct &>/dev/null
+    fi
+    echo "done."
+}
+blockcheck
 
 echo -n "Preparing block device '${target_disk}'... "
 # New GPT, part 1 64MB ESP, part 2 960MB BOOT, part 3 inf LVM PV
@@ -455,7 +484,7 @@ yes | vgcreate vgx ${target_disk}3 >&2
 echo "done."
 
 echo -n "Creating root logical volume (${size_root_lv}GB)... "
-lvcreate -L ${size_root_lv}G -n root vgx >&2
+yes | lvcreate -L ${size_root_lv}G -n root vgx >&2
 echo "done."
 echo -n "Creating filesystem on root logical volume (ext4)... "
 yes | mkfs.ext4 /dev/vgx/root >&2
@@ -465,18 +494,18 @@ echo -n "Creating ceph logical volume (${size_ceph_lv}GB)... "
 yes | lvcreate -L ${size_ceph_lv}G -n ceph vgx >&2
 echo "done."
 echo -n "Creating filesystem on ceph logical volume (ext4)... "
-mkfs.ext4 /dev/vgx/ceph >&2
+yes | mkfs.ext4 /dev/vgx/ceph >&2
 echo "done."
 
 echo -n "Creating zookeeper logical volume (${size_zookeeper_lv}GB)... "
 yes | lvcreate -L ${size_zookeeper_lv}G -n zookeeper vgx >&2
 echo "done."
 echo -n "Creating filesystem on zookeeper logical volume (ext4)... "
-mkfs.ext4 /dev/vgx/zookeeper >&2
+yes | mkfs.ext4 /dev/vgx/zookeeper >&2
 echo "done."
 
 echo -n "Creating swap logical volume (${size_swap_lv}GB)... "
-lvcreate -L ${size_swap_lv}G -n swap vgx >&2
+yes | lvcreate -L ${size_swap_lv}G -n swap vgx >&2
 echo "done."
 echo -n "Creating swap space on swap logical volume... "
 yes | mkswap -f /dev/vgx/swap >&2
@@ -511,7 +540,7 @@ mount -t tmpfs tmpfs ${target}/tmp >&2
 echo "done."
 
 echo -n "Running debootstrap install... "
-debootstrap --include=${debpkglist} ${debrelease} ${target}/ ${debmirror} >&2
+debootstrap --include=${debpkglist} --exclude=${exclpkglist} ${debrelease} ${target}/ ${debmirror} >&2
 echo "done."
 
 echo -n "Adding non-free repository (firmware, etc.)... "
