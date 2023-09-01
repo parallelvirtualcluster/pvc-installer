@@ -29,6 +29,7 @@ show_help() {
     echo -e "   -o: Create the ISO as <output_filename> instead of the default."
     echo -e "   -u: Change 'deploy' user to a new username."
     echo -e "   -c: Change CPU architecture to a new architecture [x86_64/aarch64]."
+    echo -e "   -m: Change the mirror server (default 'https://debian.mirror.rafal.ca')."
     echo -e "   -a: Preserve live-build artifacts."
     echo -e "   -k: Preserve live-build config."
 }
@@ -69,6 +70,10 @@ while [ $# -gt 0 ]; do
             fi
             shift 2
         ;;
+        -m)
+            mirror_server="${2}"
+            shift 2
+        ;;
         -a)
             preserve_artifacts='y'
             shift
@@ -95,6 +100,9 @@ fi
 if [[ -z ${deployusername} ]]; then
     deployusername="deploy"
 fi
+if [[ -z ${mirror_server} ]]; then
+    mirror_server="https://debian.mirror.rafal.ca"
+fi
 
 mkdir -p artifacts/lb
 pushd artifacts/lb &>/dev/null
@@ -108,8 +116,8 @@ echo "Initializing config..."
 lb config \
        --distribution buster \
        --archive-areas "main contrib non-free" \
-       --mirror-bootstrap "https://debian.mirror.rafal.ca/debian" \
-       --mirror-chroot-security "https://debian.mirror.rafal.ca/debian-security" \
+       --mirror-bootstrap "${mirror_server}/debian" \
+       --mirror-chroot-security "${mirror_server}/debian-security" \
        --apt-recommends false \
        ${arch_config_append} || fail "Failed to initialize live-build config"
 echo
