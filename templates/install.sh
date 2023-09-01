@@ -838,13 +838,12 @@ macaddr=\$( ip -br link show \${target_interface} | awk '{ print \$3 }' )
 ipaddr=\$( ip -br address show \${target_interface} | awk '{ print \$3 }' | awk -F '/' '{ print \$1 }' )
 bmc_macaddr=\$( ipmitool lan print | grep 'MAC Address  ' | awk '{ print \$NF }' )
 bmc_ipaddr=\$( ipmitool lan print | grep 'IP Address  ' | awk '{ print \$NF }' )
-if [[ -f /etc/pvc-install.pvcbootstrapd_completed ]]; then
-    # The third boot, when all pvcprovisionerd plugins have been run (this script will henceforth do nothing)
-    action="system-boot_bootstrap-completed"
+if [[ -f /etc/pvc-install.hooks ]]; then
+    # The third boot, when all pvcprovisionerd hook plugins have been run (this script will henceforth do nothing)
+    action="system-boot_hooks-completed"
 elif [[ -f /etc/pvc-install.base && -f /etc/pvc-install.pvc ]]; then
     # The second boot, when Ansible has been run and plugins running
     action="system-boot_ansible-completed"
-    touch /etc/pvc-install.pvcbootstrapd_completed
 else
     # The first boot, when Ansible has not been run yet
     action="system-boot_initial"
@@ -854,11 +853,11 @@ curl -X POST \
     -d "{\"action\":\"\${action}\",\"macaddr\":\"\${macaddr}\",\"ipaddr\":\"\${ipaddr}\",\"hostname\":\"\$( hostname -s )\",\"bmc_macaddr\":\"\${bmc_macaddr}\",\"bmc_ipaddr\":\"\${bmc_ipaddr}\"}" \
     \${pvcbootstrapd_checkin_uri}
 
-if [[ -f /etc/pvc-install.pvcbootstrapd_completed ]]; then
+if [[ \${action} == "system-boot_hooks-completed" ]]; then
     # Clean up the bootstrap interface and this script
     rm /etc/network/interfaces.d/\${target_interface}
     rm \$0
-    exit 0
+    poweroff
 fi
 EOF
         chmod +x ${target}/etc/network/pvcprovisionerd.checkin.sh
