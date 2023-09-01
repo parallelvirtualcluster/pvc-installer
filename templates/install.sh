@@ -87,6 +87,49 @@ suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,n
 # roles will overwrite it by default during configuration.
 root_password="hCb1y2PF"
 
+# Cleanup function for failures or final termination
+cleanup() {
+    set +o errexit
+   
+    echo -n "Cleaning up target... "
+    umount ${target}/tmp >&2
+    umount ${target}/run >&2
+    umount ${target}/sys >&2
+    umount ${target}/proc >&2
+    umount ${target}/dev/pts >&2
+    umount ${target}/dev >&2
+    umount ${target}/var/lib/ceph >&2
+    umount ${target}/var/lib/zookeeper >&2
+    umount ${target}/boot/efi >&2
+    umount ${target}/boot >&2
+    umount ${target} >&2
+    vgchange -an >&2
+    rmdir ${target} >&2
+    echo "done."
+
+    echo -n "Removing lockfile... "
+    rm ${lockfile}
+    echo "done."
+    echo
+
+    if [[ -z ${DONE} ]]; then
+        case ${install_option} in
+            on)
+                echo "A fatal error occurred; rebooting in 30 seconds. Press any key to spawn a shell."
+                if ! read -t 30; then
+                    reboot
+                fi
+            ;;
+            *)
+                echo "A fatal error occurred. Use the shell to inspect the log for errors at:"
+                echo -e "  ${logfile}"
+                echo "To restart the installer, run '/install.sh'."
+            ;;
+        esac
+    fi
+}
+trap cleanup EXIT
+
 # Checkin function
 seed_checkin() (
     case ${1} in
@@ -136,7 +179,7 @@ seed_config() {
     done
 
     # Fetch the seed config
-    tftp -m binary "${seed_host}" -c get "${seed_file}" /tmp/install.seed
+    tftp -m binary "${seed_host}" -c get "${seed_file}" /tmp/install.seed || exit 1
 
     # Load the variables from the seed config
     . /tmp/install.seed || exit 1
@@ -545,43 +588,6 @@ case ${install_option} in
         true
     ;;
 esac
-
-cleanup() {
-    set +o errexit
-    echo -n "Cleaning up... "
-    umount ${target}/tmp >&2
-    umount ${target}/run >&2
-    umount ${target}/sys >&2
-    umount ${target}/proc >&2
-    umount ${target}/dev/pts >&2
-    umount ${target}/dev >&2
-    umount ${target}/var/lib/ceph >&2
-    umount ${target}/var/lib/zookeeper >&2
-    umount ${target}/boot/efi >&2
-    umount ${target}/boot >&2
-    umount ${target} >&2
-    vgchange -an >&2
-    rmdir ${target} >&2
-    rm ${lockfile}
-    echo "done."
-    echo
-
-    if [[ -z ${DONE} ]]; then
-        case ${install_option} in
-            on)
-                echo "A fatal error occurred; rebooting in 30 seconds. Press any key to spawn a shell."
-                if ! read -t 30; then
-                    reboot
-                fi
-            ;;
-            *)
-                # noop
-                true
-            ;;
-        esac
-    fi
-}
-trap cleanup EXIT
 
 echo -n "Determining partition sizes... "
 blockdev_size_bytes="$( blockdev --getsize64 ${target_disk} )"
