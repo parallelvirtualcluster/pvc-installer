@@ -541,8 +541,8 @@ cleanup() {
     if [[ -z ${DONE} ]]; then
         case ${install_option} in
             on)
-                echo "A fatal error occurred; rebooting in 10 seconds. Press any key to spawn a shell."
-                if ! read -t 10; then
+                echo "A fatal error occurred; rebooting in 30 seconds. Press any key to spawn a shell."
+                if ! read -t 30; then
                     reboot
                 fi
             ;;
