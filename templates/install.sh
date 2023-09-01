@@ -29,7 +29,7 @@ if [[ ${#active_ttys} -gt 1 ]]; then
         else
             echo "Found more than one TTY!"
             echo -n "Waiting for other TTYs to time out... "
-            sleep $(( 16 + $( grep -o '[0-9]+' <<<"${this_tty}" ) ))
+            sleep $(( 16 + $( grep -E -o '[0-9]+' <<<"${this_tty}" ) ))
             echo "done."
         fi
     else
