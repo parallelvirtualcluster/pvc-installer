@@ -376,15 +376,6 @@ interactive_config() {
         fi
         echo
     done
-    echo "2c) Skip disk zeroing? Only recommended for slow, low-endurance, or known-"
-    echo -n "zeroed block devices. [y/N] "
-    read skip_blockcheck
-    if [[ ${skip_blockcheck} == 'y' || ${skip_blockcheck} == 'Y' ]]; then
-        skip_blockcheck="y"
-    else
-        skip_blockcheck=""
-    fi
-    echo
 
     for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
         ip link set ${interface} up
@@ -690,47 +681,21 @@ for pv in $( pvscan | grep "${target_disk}" | awk '{ print $2 }' ); do
 done
 echo "done."
 
-blockcheck() {
-    # Skip checking if the key is set
-    if [[ -n ${skip_blockcheck} ]]; then
-        return
-    fi
+echo -n "Wiping partition signatures on '${target_disk}'... "
+wipefs -a ${target_disk} >&2
+echo "done."
 
-    # Determine optimal block size for zeroing
-    exponent=16
-    remainder=1
-    while [[ ${remainder} -gt 0 && ${exponent} -gt 0 ]]; do
-        exponent=$(( ${exponent} - 1 ))
-        size=$(( 2**9 * 2 ** ${exponent} ))
-        count=$(( ${blockdev_size_bytes} / ${size} ))
-        remainder=$(( ${blockdev_size_bytes} - ${count} * ${size} ))
-    done
-    if [[ ${remainder} -gt 0 ]]; then
-        echo "Failed to find a suitable block size for wiping... skipping."
-        return
-    fi
-
-    echo -n "Checking if block device '${target_disk}' is already wiped... "
-    if ! cmp --silent --bytes ${blockdev_size_bytes} /dev/zero ${target_disk}; then
-        echo "false."
-        echo "Wiping block device '${target_disk}' (${count} blocks of ${size} bytes)..."
-        dd if=/dev/zero of=${target_disk} bs=${size} count=${count} oflag=direct status=progress 2>&1
-    else
-        echo "done."
-    fi
-}
-blockcheck
-
-echo -n "Preparing block device '${target_disk}'... "
+echo -n "Preparing GPT partitions on '${target_disk}'... "
 # New GPT, part 1 32MB BIOS boot, part 2 64MB ESP, part 3 928MB BOOT, part 4 inf LVM PV
 echo -e "o\ny\nn\n1\n\n32M\nEF02\nn\n2\n\n64M\nEF00\nn\n3\n\n928M\n8300\nn\n4\n\n\n8E00\nw\ny\n" | gdisk ${target_disk} >&2
 echo "done."
 
 echo -n "Rescanning disks... "
 partprobe >&2 || true
+sleep 5
 echo "done."
 
-echo -n "Creating LVM PV... "
+echo -n "Creating LVM PV on '${target_disk}4'... "
 yes | pvcreate -ffy ${target_disk}4 >&2
 echo "done."
 

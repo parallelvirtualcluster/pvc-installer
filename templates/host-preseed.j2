@@ -31,11 +31,6 @@ addpkglist="{{ addpkglist }}"
 filesystem="{{ filesystem }}"
 {% endif %}
 
-{%- if skip_blockcheck is defined and skip_blockcheck %}
-# Skip block zeroing; only recommended for testing, slow, low-endurance, or known-zeroed block devices.
-skip_blockcheck="y"
-{% endif %}
-
 ###
 ### Per-host definitions (required)
 ###
