@@ -5,21 +5,49 @@ lockfile="/run/pvc-install.lock"
 
 if [[ $( whoami ) != "root" ]]; then
     echo "STOP! This script is designed to run as root within the installer only!"
-    echo "Do not run it on your system. To build a PVC installer ISO, use './buildiso.sh' instead!"
+    echo "To build a PVC installer ISO file, use './buildiso.sh'."
+    echo "To build a PVC installer PXE root, use './buildpxe.sh'."
     exit 1
 fi
 
-# Random delay to prevent overlaps
-DELAY=$(( ${RANDOM} % 10 ))
-echo -n "Waiting ${DELAY} seconds... "
-sleep ${DELAY}
-echo "done."
+echo
+active_ttys=( $( w | grep "^root" | awk '{ print $2 }' ) )
+echo "Active TTYs: ${active_ttys[@]}"
+this_tty=$( tty | sed -e "s/.*tty\(.*\)/\1/" )
+echo "This TTY: ${this_tty}"
+echo
 
+if [[ ${#active_ttys} -gt 1 ]]; then
+    if "${active_ttys[@]}" =~ "ttyS" ]]; then
+        if [[ "${this_tty}" =~ "tty[0-9]+" ]]; then
+            echo "Found more than one TTY and at least one serial TTY!"
+            echo -n "If you wish to run the installer on this graphical TTY instead of the serial TTY, press enter within 15 seconds... "
+            if ! read -t 15; then
+                echo "timeout."
+                exit 0
+            fi
+        else
+            echo "Found more than one TTY!"
+            echo -n "Waiting for other TTYs to time out... "
+            sleep $(( 16 + $( grep -o '[0-9]+' <<<"${this_tty}" ) ))
+            echo "done."
+        fi
+    else
+        echo "Found more than one graphical TTY!"
+        echo -n "If you wish to run the installer on this graphical TTY, press enter within 60 seconds... "
+        if ! read -t 60; then
+            echo "timeout."
+            echo "To launch the installer again on this TTY, run '/install.sh'."
+            exit 0
+        fi
+    fi
+fi
 if [[ -f ${lockfile} ]]; then
-    echo "An instance of 'install.sh' is already running!"
-    exit 1
+    echo "Aborting installer due to lockfile presence: $( cat ${lockfile} )."
+    exit 0
 fi
-touch ${lockfile}
+printf "PID $$ on TTY ${this_tty}" > ${lockfile}
+echo
 
 iso_name="XXDATEXX"
 target_deploy_user="XXDEPLOYUSERXX"
@@ -40,6 +68,7 @@ root_password="hCb1y2PF"
 
 # Respawn function
 respawn() (
+    echo "Respawning..."
     $0 & disown
 )
 
