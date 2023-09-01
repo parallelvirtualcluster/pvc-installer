@@ -143,11 +143,9 @@ seed_checkin() (
             action="install-complete"
         ;;
     esac
-    macaddr=$( ip -br link show ${target_interface} | awk '{ print $3 }' )
-    ipaddr=$( ip -br address show ${target_interface} | awk '{ print $3 }' | awk -F '/' '{ print $1 }' )
     curl -X POST \
         -H "Content-Type: application/json" \
-        -d "{\"action\":\"${action}\",\"macaddr\":\"${macaddr}\",\"ipaddr\":\"${ipaddr}\",\"hostname\":\"${target_hostname}\",\"bmc_macaddr\":\"${bmc_macaddr}\",\"bmc_ipaddr\":\"${bmc_ipaddr}\"}" \
+        -d "{\"action\":\"${action}\",\"hostname\":\"${target_hostname}\",\"host_macaddr\":\"${host_macaddr}\",\"host_ipaddr\":\"${host_ipaddr}\",\"bmc_macaddr\":\"${bmc_macaddr}\",\"bmc_ipaddr\":\"${bmc_ipaddr}\"}" \
         ${pvcbootstrapd_checkin_uri} >&2
 )
 
@@ -208,6 +206,9 @@ seed_config() {
     # Handle the target interface
     target_route="$( ip route show to match ${seed_host} | grep 'scope link' )"
     target_interface="$( grep -E -o 'e[a-z]+[0-9]+[a-z0-9]*' <<<"${target_route}" )"
+
+    host_macaddr=$( ip -br link show ${target_interface} | awk '{ print $3 }' )
+    host_ipaddr=$( ip -br address show ${target_interface} | awk '{ print $3 }' | awk -F '/' '{ print $1 }' )
 
     # Handle the target disk
     if [[ -n ${target_disk_path} ]]; then
@@ -834,8 +835,8 @@ case ${install_option} in
 #!/usr/bin/env bash
 target_interface=\${1}
 pvcbootstrapd_checkin_uri="${pvcbootstrapd_checkin_uri}"
-macaddr=\$( ip -br link show \${target_interface} | awk '{ print \$3 }' )
-ipaddr=\$( ip -br address show \${target_interface} | awk '{ print \$3 }' | awk -F '/' '{ print \$1 }' )
+host_macaddr=\$( ip -br link show \${target_interface} | awk '{ print \$3 }' )
+host_ipaddr=\$( ip -br address show \${target_interface} | awk '{ print \$3 }' | awk -F '/' '{ print \$1 }' )
 bmc_macaddr=\$( ipmitool lan print | grep 'MAC Address  ' | awk '{ print \$NF }' )
 bmc_ipaddr=\$( ipmitool lan print | grep 'IP Address  ' | awk '{ print \$NF }' )
 if [[ -f /etc/pvc-install.hooks ]]; then
@@ -850,7 +851,7 @@ else
 fi
 curl -X POST \
     -H "Content-Type: application/json" \
-    -d "{\"action\":\"\${action}\",\"macaddr\":\"\${macaddr}\",\"ipaddr\":\"\${ipaddr}\",\"hostname\":\"\$( hostname -s )\",\"bmc_macaddr\":\"\${bmc_macaddr}\",\"bmc_ipaddr\":\"\${bmc_ipaddr}\"}" \
+    -d "{\"action\":\"\${action}\",\"hostname\":\"\$( hostname -s )\",\"host_macaddr\":\"\${host_macaddr}\",\"host_ipaddr\":\"\${host_ipaddr}\",\"bmc_macaddr\":\"\${bmc_macaddr}\",\"bmc_ipaddr\":\"\${bmc_ipaddr}\"}" \
     \${pvcbootstrapd_checkin_uri}
 
 if [[ \${action} == "system-boot_completed" ]]; then
