@@ -604,14 +604,14 @@ fi
 
 echo -n "Unmounting potential partitions on target device... "
 for mount in $( mount | grep "${target_disk}" | awk '{ print $3 }' | sort -r ); do
-    umount -f ${mount} >&2
+    umount -f ${mount} >&2 || true
 done
 echo "done."
 
 echo -n "Unmounting potential LVM logical volumes on target device... "
 for vg in $( pvscan | grep "${target_disk}" | awk '{ print $4 }' ); do
     for mount in $( mount | grep "/${vg}" | awk '{ print $3 }' | sort -r ); do
-        umount -f ${mount} >&2
+        umount -f ${mount} >&2 || true
     done
 done
 echo "done."
@@ -621,13 +621,13 @@ for vg in $( pvscan | grep "${target_disk}" | awk '{ print $4 }' ); do
     vgchange -an ${vg} >&2 || true
     sleep 1
     vgchange -an ${vg} >&2
-    yes | vgremove ${vg}
+    yes | vgremove -f ${vg} || true
 done
 echo "done."
 
 echo -n "Removing existing LVM physical volumes... "
 for pv in $( pvcscan | grep "${target_disk}" | awk '{ print $2 }' ); do
-    yes | pvremove ${pv}
+    yes | pvremove -f ${pv} || true
 done
 echo "done."
 
