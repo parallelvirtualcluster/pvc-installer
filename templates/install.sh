@@ -49,6 +49,9 @@ fi
 printf "PID $$ on TTY ${this_tty}" > ${lockfile}
 echo
 
+# Stop all existing networking for a fresh slate
+service networking stop &>/dev/null
+
 # Set the target consoles in the installed image
 target_consoles=""
 for tty in $( echo -e "$( sed 's/ /\n/g' <<<"${active_ttys[@]}" )" | sort ); do
@@ -310,6 +313,10 @@ interactive_config() {
     echo "        then re-running it by calling /install.sh in the resulting shell."
     echo
 
+    echo "--------------------------------------------------------"
+    echo "| Section 1: System Hostname                           |"
+    echo "--------------------------------------------------------"
+    echo
     echo "1) Please enter a fully-qualified hostname for the system. This should match the hostname"
     echo "in the 'pvc-ansible' inventory."
     while [[ -z ${target_hostname} ]]; do
@@ -337,6 +344,10 @@ interactive_config() {
         done
     )"
 
+    echo "--------------------------------------------------------"
+    echo "| Section 2: Disk setup                                |"
+    echo "--------------------------------------------------------"
+    echo
     echo "2a) Please enter the disk to install the PVC base system to. This disk will be"
     echo "wiped, an LVM PV created on it, and the system installed to this LVM."
     echo "* NOTE: PVC requires a disk of at least 30GB to be installed to, and 100GB is the"
@@ -394,6 +405,10 @@ interactive_config() {
     interfaces="$(
         ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2"\t"$3 }' | tr -d ':'
     )"
+    echo "--------------------------------------------------------"
+    echo "| Section 3: Networking                                |"
+    echo "--------------------------------------------------------"
+    echo
     echo "Available interfaces:"
     echo
     echo -e "$( sed 's/\(.*\)/  \1/' <<<"${interfaces[@]}" )"
@@ -403,7 +418,6 @@ interactive_config() {
     echo "installer with ^C and '/install.sh'."
     echo
     echo "If you want a bonding interface, please enter 'bond' here."
-    echo
     while [[ -z ${target_interface} ]]; do
         echo
         echo -n "> "
@@ -422,7 +436,7 @@ interactive_config() {
         echo
     done
 
-    if [[ ${target_interace} == "bond" ]]; then
+    if [[ ${target_interface} == "bond" ]]; then
         target_interface=""
         echo "3b) Please enter the name of the bonding interface (e.g. 'bond0'). This"
         echo "should match the interface you will use in the pvc-ansible configuration if"
@@ -477,15 +491,19 @@ interactive_config() {
         for slave_interface in ${slave_interfaces}; do
             ip link set ${slave_interface} down
             ip link set ${slave_interface} master ${target_interface}
+            ip link set ${slave_interface} up
         done
         ip link set ${target_interface} up
         echo "done."
+        echo
 
         next_prompt_1="3e"
         next_prompt_2="3f"
+        next_prompt_3="3g"
     else
         next_prompt_1="3b"
         next_prompt_2="3c"
+        next_prompt_3="3g"
     fi
 
     echo -n "${next_prompt_1}) Is a tagged vLAN required for the primary network interface? [y/N] "
@@ -517,7 +535,7 @@ interactive_config() {
     if [[ -n ${target_ipaddr} ]]; then
         target_netformat="static"
         echo
-        echo "3d) Please enter the default gateway IP address of the primary"
+        echo "${next_prompt_3}) Please enter the default gateway IP address of the primary"
         echo "network interface."
         while [[ -z ${target_defgw} ]]; do
             echo
@@ -588,6 +606,10 @@ EOF
     echo "done."
     echo
 
+    echo "--------------------------------------------------------"
+    echo "| Section 4: Debian Configuration                      |"
+    echo "--------------------------------------------------------"
+    echo
     echo "4a) Please enter an alternate Debian release codename for the system if desired."
     echo "    Supported: ${supported_debrelease}"
     echo "    Default: ${default_debrelease}"
@@ -635,6 +657,10 @@ EOF
     echo
 
     target_keys_method="wget"
+    echo "--------------------------------------------------------"
+    echo "| Section 5: SSH Setup                                 |"
+    echo "--------------------------------------------------------"
+    echo
     echo "5) Please enter an HTTP URL containing a text list of SSH authorized keys to"
     echo "fetch. These keys will be allowed access to the deployment user '${target_deploy_user}'"
     echo "via SSH."
@@ -686,6 +712,7 @@ case ${install_option} in
     ;;
 esac
 
+echo
 titlestring_text="| Proceeding with installation of host '${target_hostname}'. |"
 titlestring_len="$(( $( wc -c <<<"${titlestring_text}" ) - 2 ))"
 for i in $( seq 0 ${titlestring_len} ); do echo -n "-"; done; echo
