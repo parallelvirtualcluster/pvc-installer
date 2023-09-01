@@ -243,8 +243,11 @@ seed_config() {
                 is_match="$(
                     python <<EOF
 from re import sub
-b_size = float(sub(r'\D','','${b_size}'))
-t_size = float(sub(r'\D','','${size}'))
+try:
+    b_size = float(sub(r'\D.','','${b_size}'))
+    t_size = float(sub(r'\D.','','${size}'))
+except ValueError:
+    exit(0)
 plustwopct = t_size * 1.02
 minustwopct = t_size * 0.98
 if b_size > minustwopct and b_size < plustwopct:
