@@ -47,7 +47,10 @@ while [[ -z ${target_hostname} ]]; do
 done
 
 disks="$(
-    for disk in /dev/sd?; do
+    for disk in /dev/sd? /dev/nvme?n?; do
+        if [[ ! -b ${disk} ]]; then
+            continue
+        fi
         disk_data="$( fdisk -l ${disk} 2>/dev/null )"
         echo -n "${disk}"
         echo -en "\t$( grep "^Disk model:" <<<"${disk_data}" | awk '{ $1=""; print $0 }' )"
@@ -78,6 +81,7 @@ while [[ ! -b ${target_disk} ]]; do
     fi
     blockdev_size="$(( $( blockdev --getsize64 ${target_disk} ) / 1024 / 1024 / 1024 - 1))"
     if [[ ${blockdev_size} -lt 30 ]]; then
+        target_disk=""
         echo
         echo "The specified disk is too small (<30 GB) to use as a PVC system disk."
         echo "Please choose an alternative disk."
@@ -104,10 +108,15 @@ while [[ -z ${target_interface} ]]; do
     echo
     echo -n "> "
     read target_interface
-    if ! grep -qw "${target_interface}" <<<"${interfaces[@]}"; then
+    if [[ -z ${target_interface} ]]; then
         echo
         echo "Please enter a valid interface."
+        continue
+    fi
+    if ! grep -qw "${target_interface}" <<<"${interfaces[@]}"; then
         target_interface=""
+        echo
+        echo "Please enter a valid interface."
         continue
     fi
     echo
@@ -209,14 +218,14 @@ echo
 echo "4a) Please enter an alternate Debian release codename for the system if desired."
 echo "    Supported: ${supported_debrelease}"
 echo "    Default: ${default_debrelease}"
-while [[ -z ${target_hostname} ]]; do
+while [[ -z ${debrelease} ]]; do
     echo
     echo -n "> "
     read debrelease
     if [[ -z ${debrelease} ]]; then
         debrelease="${default_debrelease}"
     fi
-    if ! grep "${debrelease}" <<<"${supported_debrelease}"
+    if ! grep "${debrelease}" <<<"${supported_debrelease}"; then
         debrelease=""
         echo
         echo "Please enter a valid release."
@@ -234,7 +243,7 @@ while [[ -z ${debmirror} ]]; do
     if [[ -z ${debmirror} ]]; then
         debmirror="${default_debmirror}"
     fi
-    if ! wget -O /dev/null ${debmirror}/${debrelease}/Release &>/dev/null; then
+    if ! wget -O /dev/null ${debmirror}/dists/${debrelease}/Release &>/dev/null; then
         echo
         echo "Please enter a valid Debian mirror URL."
         continue
