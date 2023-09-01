@@ -626,7 +626,7 @@ echo -n "Disabing potential LVM volume groups on target device... "
 for vg in $( pvscan | grep "${target_disk}" | awk '{ print $4 }' ); do
     vgchange -an ${vg} >&2 || true
     sleep 1
-    vgchange -an ${vg} >&2
+    vgchange -an ${vg} >&2 || true
     yes | vgremove -f ${vg} || true
 done
 echo "done."
