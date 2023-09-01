@@ -340,6 +340,13 @@ chroot ${target} grub-install --target=${bios_target} ${target_disk} >&2
 chroot ${target} grub-mkconfig -o /boot/grub/grub.cfg >&2
 echo "done."
 
+echo
+echo "Edit the /etc/network/interfaces file in the target before completing setup? [y/N]"
+read edit_ifaces
+if [[ ${edit_ifaces} == 'y' or ${edit_ifaces} == 'Y' ]]; then
+    vim ${target}/etc/network/interfaces
+fi  
+
 cleanup
 
 echo "-------------------------------------------------------------------------------------"
