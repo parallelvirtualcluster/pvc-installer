@@ -219,7 +219,7 @@ seed_config() {
         detect:*)
             # Read the detect string into separate variables
             # A detect string is formated thusly:
-            #   detect:<Controller-or-Vendor-Name>:<0-indexed-ID>:<Capacity-in-human-units>
+            #   detect:<Controller-or-Model-Name>:<0-indexed-ID>:<Capacity-in-human-units>
             # For example:
             #   detect:INTEL:1:800GB
             #   detect:DELLBOSS:0:240GB
