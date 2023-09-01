@@ -567,7 +567,7 @@ EOF
 
     target_keys_method="wget"
     echo "5) Please enter an HTTP URL containing a text list of SSH authorized keys to"
-    echo "fetch. These keys will be allowed access to the deployment user 'XXDEPLOYUSER'"
+    echo "fetch. These keys will be allowed access to the deployment user '${target_deploy_user}'"
     echo "via SSH."
     echo ""
     echo "Leave blank to bypass this and use a password instead."
