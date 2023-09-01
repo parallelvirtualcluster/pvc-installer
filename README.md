@@ -4,7 +4,7 @@ This repository contains the generator and configurations for the PVC Live Insta
 
 ## Using
 
-Run `./buildiso.sh`. This will pull down the Debian LiveCD image, extract it, deboostrap a fresh install environment, copy in the configurations, generate a squashfs, then finally generate an ISO for use via CD-ROM, Virtual Media, or USB/SDCard flash.
+Run `./buildiso.sh`. This will pull down the Debian LiveCD image, extract it, debootstrap a fresh install environment, copy in the configurations, generate a squashfs, then finally generate an ISO for use via CD-ROM, Virtual Media, or USB/SDCard flash.
 
 Note that artifacts of the build (the LiveCD ISO, debootstrap directory, and squashfs) are cached in `artifacts/` for future reuse.
 
