@@ -1,2 +1,4 @@
 debootstrap/
 *.iso
+*.squashfs
+*.bak
