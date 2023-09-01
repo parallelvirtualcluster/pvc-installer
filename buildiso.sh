@@ -25,17 +25,17 @@ show_help() {
     echo -e " disk, partitioning, installing the base OS, and performing some initial"
     echo -e " configuration to allow the PVC Ansible role to take over after completion."
     echo
-    echo -e "Usage: $0 [-h] [-o <output_filename>] [-s <liveiso_source_url>]"
+    echo -e "Usage: $0 [-h] [-o <output_filename>] [-s <liveiso_source_url>] [-a]"
     echo
     echo -e "   -h: Display this help message."
     echo -e "   -o: Create the ISO as <output_filename> instead of the default."
     echo -e "   -s: Obtain the source Debian Live ISO from <liveiso_source_url> instead of"
     echo -e "       the default."
-    echo -e "   -i: Ignore cached squashfs artifact during rebuild (ISO and debootstrap"
-    echo -e "       artifacts are never ignored)."
+    echo -e "   -a: Use cached squashfs artifact during rebuild (cached ISO and debootstrap"
+    echo -e "       artifacts are always used)."
 }
 
-while getopts "h?o:s:i" opt; do
+while getopts "h?o:s:a" opt; do
     case "$opt" in
         h|\?)
             show_help
@@ -47,8 +47,8 @@ while getopts "h?o:s:i" opt; do
 		s)
 			srcliveisourl=$OPTARG
 		;;
-        i)
-            ignorecachedsquashfs='y'
+        a)
+            usecachedsquashfs='y'
         ;;
     esac
 done
@@ -120,7 +120,7 @@ prepare_rootfs() {
     echo "done."
     
     echo -n "Generating squashfs image of live installation... "
-    if [[ ! -f artifacts/filesystem.squashfs && -n ${ignorecachedsquashfs} ]]; then
+    if [[ ! -f artifacts/filesystem.squashfs && -z ${usecachedsquashfs} ]]; then
         sudo nice mksquashfs ${tempdir}/rootfs/ artifacts/filesystem.squashfs -e boot &>/dev/null || fail "Error generating squashfs."
     fi
     sudo cp artifacts/filesystem.squashfs ${tempdir}/installer/live/filesystem.squashfs &>/dev/null || fail "Error copying squashfs to tempdir."
