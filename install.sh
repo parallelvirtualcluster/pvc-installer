@@ -290,8 +290,11 @@ echo "done."
 
 echo -n "Setting /etc/issue generator... "
 echo -e "#!/bin/sh
-IP="\$\( ip addr show dev ${target_interface} | grep inet | awk \'\{ print \$2 \}\' \)"
-echo -e \"Debian GNU/Linux 10 \\n \\l\n\nPrimary interface IP address: \$IP\n\" > /etc/issue" | tee ${target}/etc/if-up.d/issue-gen >&2
+IP=\"\$( ip -4 addr show dev ${target_interface} | grep inet | awk '{ print \$2 }' | head -1 )\"
+echo \"Debian GNU/Linux 10 \\\\n \\\\l
+
+Primary interface IP address: \$IP
+\" > /etc/issue" | tee ${target}/etc/if-up.d/issue-gen >&2
 chmod +x ${target}/etc/if-up.d/issue-gen 1>&2
 echo "done."
 
