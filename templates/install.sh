@@ -394,13 +394,16 @@ interactive_config() {
     interfaces="$(
         ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2"\t"$3 }' | tr -d ':'
     )"
+    echo "Available interfaces:"
+    echo
+    echo -e "$( sed 's/\(.*\)/  \1/' <<<"${interfaces[@]}" )"
+    echo
     echo "3a) Please enter the primary network interface for external connectivity. If"
     echo "no entries are shown here, ensure a cable is connected, then restart the"
     echo "installer with ^C and '/install.sh'."
     echo
-    echo "Available interfaces:"
+    echo "If you want a bonding interface, please enter 'bond' here."
     echo
-    echo -e "$( sed 's/\(.*\)/  \1/' <<<"${interfaces[@]}" )"
     while [[ -z ${target_interface} ]]; do
         echo
         echo -n "> "
@@ -410,7 +413,7 @@ interactive_config() {
             echo "Please enter a valid interface."
             continue
         fi
-        if ! grep -qw "${target_interface}" <<<"${interfaces[@]}"; then
+        if [[ ${target_interface} != "bond" ]] && ! grep -qw "${target_interface}" <<<"${interfaces[@]}"; then
             target_interface=""
             echo
             echo "Please enter a valid interface."
@@ -419,7 +422,73 @@ interactive_config() {
         echo
     done
 
-    echo -n "3b) Is a tagged vLAN required for the primary network interface? [y/N] "
+    if [[ ${target_interace} == "bond" ]]; then
+        target_interface=""
+        echo "3b) Please enter the name of the bonding interface (e.g. 'bond0'). This"
+        echo "should match the interface you will use in the pvc-ansible configuration if"
+        echo "applicable and MUST start with 'bond'."
+        echo
+        while [[ -z ${target_interface} ]]; do
+            echo -n "> "
+            read target_interface
+            if [[ -z ${target_interface} ]]; then
+                echo
+                echo "Please enter a valid interface."
+                continue
+            fi
+            if ! grep -q '^bond' <<<"${target_interface}"; then
+                echo
+                echo "Please enter a valid interface."
+                continue
+            fi
+        done
+        echo
+        
+        echo "3c) Please enter the bonding mode for the interface (e.g. '802.3ad' or"
+        echo "'active-backup'). This mode must be valid or the networking will fail."
+        echo
+        while [[ -z ${bonding_mode} ]]; do
+            echo -n "> "
+            read bonding_mode
+            if [[ -z ${bonding_mode} ]]; then
+                echo
+                echo "Please enter a valid bonding mode."
+                continue
+            fi
+        done
+        echo
+
+        echo "3d) Please enter the space-separated slave interfaces from the list above."
+        echo
+        while [[ -z ${slave_interfaces} ]]; do
+            echo -n "> "
+            read slave_interfaces
+            if [[ -z ${slave_interfaces} ]]; then
+                echo
+                echo "Please enter a valid list of slave interfaces."
+                continue
+            fi
+        done
+        echo
+
+        echo -n "Bringing up bond interface... "
+        ip link add ${target_interface} type bond
+        ip link set ${target_interface} type bond mode ${bonding_mode}
+        for slave_interface in ${slave_interfaces}; do
+            ip link set ${slave_interface} down
+            ip link set ${slave_interface} master ${target_interface}
+        done
+        ip link set ${target_interface} up
+        echo "done."
+
+        next_prompt_1="3e"
+        next_prompt_2="3f"
+    else
+        next_prompt_1="3b"
+        next_prompt_2="3c"
+    fi
+
+    echo -n "${next_prompt_1}) Is a tagged vLAN required for the primary network interface? [y/N] "
     read vlans_req
     if [[ ${vlans_req} == 'y' || ${vlans_req} == 'Y' ]]; then
         echo
@@ -440,7 +509,7 @@ interactive_config() {
         echo
     fi
 
-    echo "3c) Please enter the IP address, in CIDR format [X.X.X.X/YY], of the primary"
+    echo "${next_prompt_2}) Please enter the IP address, in CIDR format [X.X.X.X/YY], of the primary"
     echo "network interface. Leave blank for DHCP configuration of the interface on boot."
     echo
     echo -n "> "
@@ -827,17 +896,26 @@ interactive_interfaces_segment() {
     case ${target_interfaces_is} in
         static-vlan)
             target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device ${target_interface}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
+            if [[ -n ${slave_interfaces} ]]; then
+                target_interfaces_block="${target_interfaces_block}\n\nauto ${target_interface}\niface ${target_interface} inet manual"
+            fi
         ;;
         static-raw)
             target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
         ;;
         dhcp-vlan)
             target_interfaces_block="auto ${vlan_interface}\niface ${vlan_interface} inet ${target_netformat}\n\tvlan_raw_device${target_interface}"
+            if [[ -n ${slave_interfaces} ]]; then
+                target_interfaces_block="${target_interfaces_block}\n\nauto ${target_interface}\niface ${target_interface} inet manual"
+            fi
         ;;
         dhcp-raw)
             target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}"
         ;;
     esac
+    if [[ -n ${slave_interfaces} ]]; then
+        target_interfaces_block="${target_interfaces_block}\n\tbond-mode ${bonding_mode}\n\tbond-slaves ${slave_interfaces}"
+    fi
 }
 
 echo -n "Creating bootstrap interface segment... "
@@ -1014,7 +1092,7 @@ seed_postinst() {
 interactive_postinst() {
     set +o errexit
     echo
-    echo -n "Launch a chroot shell in the target environment? [y/N] "
+    echo -n "Launch a chroot shell in the target environment? (NOTE: no shell prompt) [y/N] "
     read launch_chroot
     if [[ ${launch_chroot} == 'y' || ${launch_chroot} == 'Y' ]]; then
         echo "Type 'exit' or Ctrl+D to exit chroot."
