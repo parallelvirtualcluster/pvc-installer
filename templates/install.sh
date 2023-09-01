@@ -812,8 +812,8 @@ target_interface=\${1}
 pvcbootstrapd_checkin_uri="${pvcbootstrapd_checkin_uri}"
 macaddr=\$( ip -br link show \${target_interface} | awk '{ print \$3 }' )
 ipaddr=\$( ip -br address show \${target_interface} | awk '{ print \$3 }' | awk -F '/' '{ print \$1 }' )
-bmc_macaddr=\$( ipmitool lan print | grep 'MAC Address  ' | awk '{ print $NF }' )
-bmc_ipaddr=\$( ipmitool lan print | grep 'IP Address  ' | awk '{ print $NF }' )
+bmc_macaddr=\$( ipmitool lan print | grep 'MAC Address  ' | awk '{ print \$NF }' )
+bmc_ipaddr=\$( ipmitool lan print | grep 'IP Address  ' | awk '{ print \$NF }' )
 if [[ -f /etc/pvc-install.pvcbootstrapd_completed ]]; then
     # The third boot, when all pvcprovisionerd plugins have been run (this script will henceforth do nothing)
     action="system-boot_bootstrap-completed"
