@@ -172,17 +172,17 @@ done
 
 seed_config() {
     # Get IPMI BMC MAC for checkings
-    bmc_macaddr="$( ipmitool lan print | grep 'MAC Address  ' | awk '{ print $NF }' )"
-    bmc_ipaddr="$( ipmitool lan print | grep 'IP Address  ' | awk '{ print $NF }' )"
+    bmc_macaddr="$( ipmitool lan print 2>/dev/null | grep 'MAC Address  ' | awk '{ print $NF }' )"
+    bmc_ipaddr="$( ipmitool lan print 2>/dev/null | grep 'IP Address  ' | awk '{ print $NF }' )"
 
     # Perform DHCP on all interfaces to come online
     for interface in $( ip address | grep '^[0-9]' | grep 'eno\|enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
         ip link set ${interface} up
-        pgrep dhclient || dhclient ${interface}
+        pgrep dhclient &>/dev/null || dhclient ${interface} >&2
     done
 
     # Fetch the seed config
-    tftp -m binary "${seed_host}" -c get "${seed_file}" /tmp/install.seed || exit 1
+    tftp -m binary "${seed_host}" -c get "${seed_file}" /tmp/install.seed >&2 || exit 1
 
     # Load the variables from the seed config
     . /tmp/install.seed || exit 1
