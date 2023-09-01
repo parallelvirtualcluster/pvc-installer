@@ -12,11 +12,9 @@ debpkglist="lvm2,parted,gdisk,grub-pc,grub-efi-amd64,linux-image-amd64,sudo,vim,
 
 clear
 
-titlestring_text="| Preparing to install a PVC node base system. |"
-titlestring_len="$( wc -c <<<"${titlestring_text}" )"
-for i in $( seq 2 ${titlestring_len} ); do echo -n "-"; done; echo
-echo "${titlestring_text}"
-for i in $( seq 2 ${titlestring_len} ); do echo -n "-"; done; echo
+echo "------------------------------------------------"
+echo "| Preparing to install a PVC node base system. |"
+echo "------------------------------------------------"
 echo
 
 echo "1) Please enter a fully-qualified hostname for the system."
@@ -149,10 +147,10 @@ fi
 echo
 
 titlestring_text="| Proceeding with installation of host '${target_hostname}'. |"
-titlestring_len="$( wc -c <<<"${titlestring_text}" )"
-for i in $( seq 2 ${titlestring_len} ); do echo -n "-"; done; echo
+titlestring_len="$(( $( wc -c <<<"${titlestring_text}" ) - 2 ))"
+for i in $( seq 0 ${titlestring_len} ); do echo -n "-"; done; echo
 echo "${titlestring_text}"
-for i in $( seq 2 ${titlestring_len} ); do echo -n "-"; done; echo
+for i in $( seq 0 ${titlestring_len} ); do echo -n "-"; done; echo
 echo
 
 ### Script begins ###
@@ -344,17 +342,15 @@ echo "done."
 
 cleanup
 
-titlestring_text="| PVC node installation finished. Next steps:                                       |"
-titlestring_len="$( wc -c <<<"${titlestring_text}" )"
-for i in $( seq 2 86 ); do echo -n "-"; done; echo
-echo "${titlestring_text}"
+echo "-------------------------------------------------------------------------------------"
+echo "| PVC node installation finished. Next steps:                                       |"
 echo "| 1. Press <enter> to reboot the system.                                            |"
 echo "| 2. Boot the PVC base hypervisor and verify SSH access (IP shown on login screen). |"
-echo "| 3. Configure /etc/network/interfaces to the cluster specifications. Remember to   |"
+echo "| 3. Configure /etc/network/interfaces to the cluster specifications. Optionally,   |"
 echo "|    remove the static or DHCP specification of the primary interface; the daemon   |"
-echo "|    manages this automatically.                                                    |"
+echo "|    manages this automatically if not present.                                     |"
 echo "| 4. Proceed with system deployment via PVC Ansible.                                |"
-for i in $( seq 2 86 ); do echo -n "-"; done; echo
+echo "-------------------------------------------------------------------------------------"
 echo
 read
 
