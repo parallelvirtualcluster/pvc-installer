@@ -1,5 +1,6 @@
 artifacts/
 debootstrap/
+pvc-installer-pxe*/
 *.iso
 *.squashfs
 *.bak
