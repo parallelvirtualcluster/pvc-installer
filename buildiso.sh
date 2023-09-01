@@ -35,7 +35,7 @@ show_help() {
     echo -e " disk, partitioning, installing the base OS, and performing some initial"
     echo -e " configuration to allow the PVC Ansible role to take over after completion."
     echo
-    echo -e "Usage: $0 [-h] [-o <output_filename>] [-s <liveiso_source_url>] [-a]"
+    echo -e "Usage: $0 [-h] [-o <output_filename>] [-s <liveiso_source_url>] [-a] [-u username]"
     echo
     echo -e "   -h: Display this help message."
     echo -e "   -o: Create the ISO as <output_filename> instead of the default."
