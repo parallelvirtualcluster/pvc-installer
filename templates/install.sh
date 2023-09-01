@@ -832,7 +832,7 @@ cat <<EOF | tee ${target}/etc/default/grub >&2
 GRUB_DEFAULT=0
 GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="Parallel Virtual Cluster (PVC) - Debian"
-GRUB_CMDLINE_LINUX="console=hvc0 console=tty0 console=ttyS0,115200"
+GRUB_CMDLINE_LINUX="console=hvc0 console=tty0 console=tty1 console=ttyS0,115200 console=ttyS1,115200"
 GRUB_TERMINAL_INPUT="console serial"
 GRUB_TERMINAL_OUTPUT="gfxterm serial"
 GRUB_SERIAL_COMMAND="serial --unit=0 --unit=1 --speed=115200"
