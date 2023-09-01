@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-which sudo >&2 && SUDO="sudo" || SUDO=""
+if [[ $( whoami ) != "root" ]]; then
+    echo "This script is designed to run as root within the installer only!"
+    exit 1
+fi
 
 logfile="/tmp/pvc-install.log"
 debrelease="buster"
@@ -31,7 +34,7 @@ done
 
 disks="$(
     for disk in /dev/sd?; do
-        gdisk_data="$( $SUDO gdisk -l ${disk} )"
+        gdisk_data="$( gdisk -l ${disk} )"
         echo -n "${disk}"
         echo -n "\t$( grep "^Model:" <<<"${gdisk_data}" | awk '{ $1=""; print $0 }' )"
         echo -n "\t$( grep "^Disk ${disk}:" <<<"${gdisk_data}" | awk '{ $1=$2=""; print $0 }' )"
@@ -58,7 +61,7 @@ while [[ ! -b ${target_disk} ]]; do
 done
 
 for interface in $( ip address | grep '^[0-9]' | grep 'enp\|ens\|wlp' | awk '{ print $2 }' | tr -d ':' ); do
-    $SUDO ip link set ${interface} up
+    ip link set ${interface} up
 done
 sleep 2
 interfaces="$(
@@ -155,69 +158,69 @@ exec 2> >( tee -ia ${logfile} >/dev/null )
 echo -n "Bringing up primary network interface in ${target_netformat} mode... "
 case ${target_netformat} in
     'static')
-        $SUDO ip link set ${target_interface} up >&2
-        $SUDO ip address add ${target_ipaddr} dev ${target_interface} >&2
-        $SUDO ip route add default via ${target_defgw} >&2
+        ip link set ${target_interface} up >&2
+        ip address add ${target_ipaddr} dev ${target_interface} >&2
+        ip route add default via ${target_defgw} >&2
         formatted_ipaddr="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Host address/{ print $NF }' )"
         formatted_netmask="$( sipcalc ${target_ipaddr} | grep -v '(' | awk '/Network mask/{ print $NF }' )"
         target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}\n\taddress ${formatted_ipaddr}\n\tnetmask ${formatted_netmask}\n\tgateway ${target_defgw}"
     ;;
     'dhcp')
-        $SUDO dhclient ${target_interface} >&2
+        dhclient ${target_interface} >&2
         target_interfaces_block="auto ${target_interface}\niface ${target_interface} inet ${target_netformat}"
     ;;
 esac
 echo "done."
 
 echo -n "Zeroing block device... "
-$SUDO dd if=/dev/zero of=${target_disk} bs=4M >&2 || true
+dd if=/dev/zero of=${target_disk} bs=4M >&2 || true
 echo "done."
 
 echo -n "Preparing block device... "
 # New GPT, part 1 64MB ESP, part 2 960MB BOOT, part 3 inf LVM PV
-echo -e "o\ny\nn\n1\n\n64M\nEF00\nn\n2\n\n960M\n8300\nn\n3\n\n\n8E00\nw\ny\n" | $SUDO gdisk ${target_disk} >&2
+echo -e "o\ny\nn\n1\n\n64M\nEF00\nn\n2\n\n960M\n8300\nn\n3\n\n\n8E00\nw\ny\n" | gdisk ${target_disk} >&2
 echo "done."
 
 echo -n "Rescanning disks... "
-$SUDO partprobe >&2
+partprobe >&2
 echo "done."
 
 echo -n "Creating LVM PV... "
-$SUDO pvcreate -ff ${target_disk}3 >&2
+pvcreate -ff ${target_disk}3 >&2
 echo "done."
 
 echo -n "Creating LVM VG named 'vgx'... "
-$SUDO vgcreate vgx ${target_disk}3 >&2
+vgcreate vgx ${target_disk}3 >&2
 echo "done."
 
 echo -n "Creating root logical volume (16GB, ext4)... "
-$SUDO lvcreate -L 16G -n root vgx >&2
-$SUDO mkfs.ext4 -f /dev/vgx/root >&2
+lvcreate -L 16G -n root vgx >&2
+mkfs.ext4 -f /dev/vgx/root >&2
 echo "done."
 
 echo -n "Creating ceph logical volume (16GB, ext4)... "
-$SUDO lvcreate -L 16G -n ceph vgx >&2
-$SUDO mkfs.ext4 -f /dev/vgx/ceph >&2
+lvcreate -L 16G -n ceph vgx >&2
+mkfs.ext4 -f /dev/vgx/ceph >&2
 echo "done."
 
 echo -n "Creating swap logical volume (8GB)... "
-$SUDO lvcreate -L 8G -n swap vgx >&2
-$SUDO mkswap -f /dev/vgx/swap >&2
+lvcreate -L 8G -n swap vgx >&2
+mkswap -f /dev/vgx/swap >&2
 echo "done."
 
 echo -n "Mounting disks on temporary target... "
 target=$( mktemp -d )
-$SUDO mount /dev/vgx/root ${target} >&2
-$SUDO mkdir -p ${target}/boot >&2
-$SUDO mount ${target_disk}2 ${target}/boot >&2
-$SUDO mkdir -p ${target}/boot/efi >&2
-$SUDO mount ${target_disk}1 ${target}/boot/efi >&2
-$SUDO mkdir -p ${target}/var/lib/ceph >&2
-$SUDO mount /dev/vgx/ceph ${target}/var/lib/ceph >&2
+mount /dev/vgx/root ${target} >&2
+mkdir -p ${target}/boot >&2
+mount ${target_disk}2 ${target}/boot >&2
+mkdir -p ${target}/boot/efi >&2
+mount ${target_disk}1 ${target}/boot/efi >&2
+mkdir -p ${target}/var/lib/ceph >&2
+mount /dev/vgx/ceph ${target}/var/lib/ceph >&2
 echo "done."
 
 echo -n "Running debootstrap install... "
-$SUDO debootstrap --include=${debpkglist} ${debrelease} ${target}/ ${debmirror} >&2
+debootstrap --include=${debpkglist} ${debrelease} ${target}/ ${debmirror} >&2
 echo "done."
 
 # Determine the bypath name of the specified system disk
@@ -230,25 +233,25 @@ for disk in /dev/disk/by-path/*; do
 done
 
 echo -n "Adding fstab entries... "
-echo "/dev/mapper/vgx-root / ext4 errors=remount-ro 0 1" | $SUDO tee -a ${target}/etc/fstab >&2
-echo "/dev/mapper/vgx-ceph /var/lib/ceph ext4 errors=remount-ro 0 2" | $SUDO tee -a ${target}/etc/fstab >&2
-echo "/dev/mapper/vgx-swap nonde swap sw 0 0" | $SUDO tee -a ${target}/etc/fstab >&2
-echo "${bypath_disk}2 /boot ext2 defaults 0 2" | $SUDO tee -a ${target}/etc/fstab >&2
-echo "${bypath_disk}1 /boot/efi vfat umask=0077 0 2" | $SUDO tee -a ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-root / ext4 errors=remount-ro 0 1" | tee -a ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-ceph /var/lib/ceph ext4 errors=remount-ro 0 2" | tee -a ${target}/etc/fstab >&2
+echo "/dev/mapper/vgx-swap nonde swap sw 0 0" | tee -a ${target}/etc/fstab >&2
+echo "${bypath_disk}2 /boot ext2 defaults 0 2" | tee -a ${target}/etc/fstab >&2
+echo "${bypath_disk}1 /boot/efi vfat umask=0077 0 2" | tee -a ${target}/etc/fstab >&2
 echo "done."
 
 echo -n "Adding interface segment... "
-echo -e "${target_interfaces_block}" | $SUDO tee -a ${target}/etc/network/interfaces >&2
+echo -e "${target_interfaces_block}" | tee -a ${target}/etc/network/interfaces >&2
 echo "done."
 
 echo -n "Adding 'deploy' user... "
-$SUDO mv ${target}/home ${target}/var/home >&2
-$SUDO chroot ${target} useradd -u 200 -d /var/home/deploy -m -s /bin/bash -g operator -G sudo deploy >&2
-$SUDO chroot ${target} mkdir -p /var/home/deploy/.ssh
+mv ${target}/home ${target}/var/home >&2
+chroot ${target} useradd -u 200 -d /var/home/deploy -m -s /bin/bash -g operator -G sudo deploy >&2
+chroot ${target} mkdir -p /var/home/deploy/.ssh
 if [[ -n ${target_keys_url} ]]; then
-$SUDO wget -O ${target}/var/home/deploy/.ssh/authorized_keys ${target_keys_url}
+wget -O ${target}/var/home/deploy/.ssh/authorized_keys ${target_keys_url}
 else
-echo "${target_password}" | $SUDO chroot ${target} passwd --stdin deploy >&2
+echo "${target_password}" | chroot ${target} passwd --stdin deploy >&2
 fi
 
 echo -n "Setting hostname... "
@@ -256,23 +259,23 @@ echo "${target_hostname}" | sudo tee ${target}/etc/hostname >&2
 echo "done."
 
 echo -n "Installing GRUB bootloader... "
-$SUDO mount --bind /dev ${target}/dev >&2
-$SUDO mount --bind /dev/pts ${target}/dev/pts >&2
-$SUDO mount --bind /proc ${target}/proc >&2
-$SUDO mount --bind /sys ${target}/sys >&2
-$SUDO chroot ${target} grub-install --target=x86_64-efi ${target_disk} >&2
-$SUDO chroot ${target} update-grub >&2
+mount --bind /dev ${target}/dev >&2
+mount --bind /dev/pts ${target}/dev/pts >&2
+mount --bind /proc ${target}/proc >&2
+mount --bind /sys ${target}/sys >&2
+chroot ${target} grub-install --target=x86_64-efi ${target_disk} >&2
+chroot ${target} update-grub >&2
 echo "done."
 
 echo -n "Cleaning up... "
-$SUDO umount ${target}/sys >&2
-$SUDO umount ${target}/proc >&2
-$SUDO umount ${target}/dev/pts >&2
-$SUDO umount ${target}/dev >&2
-$SUDO umount ${target}/var/lib/ceph >&2
-$SUDO umount ${target}/boot/efi >&2
-$SUDO umount ${target}/boot >&2
-$SUDO umount ${target} >&2
+umount ${target}/sys >&2
+umount ${target}/proc >&2
+umount ${target}/dev/pts >&2
+umount ${target}/dev >&2
+umount ${target}/var/lib/ceph >&2
+umount ${target}/boot/efi >&2
+umount ${target}/boot >&2
+umount ${target} >&2
 echo "done."
 echo
 
@@ -287,4 +290,4 @@ for i in $( seq 2 ${titlestring_len} ); do echo -n "-"; done; echo
 echo
 read
 
-$SUDO reboot
+reboot
