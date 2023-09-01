@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Generate a PVC autoinstaller ISO
 
@@ -22,9 +22,6 @@ if [[ -n ${fail} ]]; then
 fi
 
 isofilename="pvc-installer_$(date +%Y-%m-%d).iso"
-srcliveisopath="https://cdimage.debian.org/mirror/cdimage/release/current-live/amd64/iso-hybrid"
-srcliveisofilename="$( wget -O- ${srcliveisopath}/ | grep 'debian-live-.*-amd64-standard.iso' | awk -F '"' '{ print $6 }' )"
-srcliveisourl="${srcliveisopath}/${srcliveisofilename}"
 deployusername="deploy"
 
 show_help() {
@@ -49,7 +46,7 @@ show_help() {
     echo -e "   -u: Change 'deploy' user to a new username."
 }
 
-while getopts "h?o:s:a" opt; do
+while getopts "h?o:s:au:" opt; do
     case "$opt" in
         h|\?)
             show_help
@@ -70,6 +67,9 @@ while getopts "h?o:s:a" opt; do
     esac
 done
 
+srcliveisopath="https://cdimage.debian.org/mirror/cdimage/release/current-live/amd64/iso-hybrid"
+srcliveisofilename="$( wget -O- ${srcliveisopath}/ | grep 'debian-live-.*-amd64-standard.iso' | awk -F '"' '{ print $6 }' )"
+srcliveisourl="${srcliveisopath}/${srcliveisofilename}"
 srcliveisofile="$( basename ${srcliveisourl} )"
 
 tempdir=$( mktemp -d )
