@@ -80,7 +80,13 @@ default_debmirror="http://ftp.debian.org/debian"
 basepkglist="lvm2,parted,gdisk,sudo,vim,gpg,gpg-agent,openssh-server,vlan,ifenslave,python3,ca-certificates,curl"
 case $( uname -m ) in
     x86_64)
-        basepkglist="${basepkglist},grub-pc,grub-efi-amd64,linux-image-amd64"
+        # If we're in EFI mode, install grub-efi, otherwise install grub-pc
+        if grep -q efivarfs /proc/mounts &>/dev/null; then
+            grub_pkg="grub-efi"
+        else
+            grub_pkg="grub-pc"
+        fi
+        basepkglist="${basepkglist},${grub_pkg},linux-image-amd64"
     ;;
     aarch64)
         basepkglist="${basepkglist},grub-efi-arm64,linux-image-arm64"
