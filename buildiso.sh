@@ -120,6 +120,8 @@ lb config \
        --mirror-chroot-security "http://security.debian.org/debian-security" \
        --debconf-frontend readline \
        --apt-recommends false \
+       --debian-installer netinst \
+       --debian-installer-gui true \
        ${arch_config_append} || fail "Failed to initialize live-build config"
 echo
 
