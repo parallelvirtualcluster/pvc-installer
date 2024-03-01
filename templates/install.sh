@@ -572,8 +572,8 @@ interactive_config() {
         'static')
             if [[ -n ${vlan_id} ]]; then
                 modprobe 8021q >&2
-                vconfig add ${target_interface} ${vlan_id} >&2
                 vlan_interface=${target_interface}.${vlan_id}
+                ip link add link ${target_interface} name ${vlan_interface} type vlan id ${vlan_id} >&2
                 ip link set ${target_interface} up >&2 || true
                 ip link set ${vlan_interface} up >&2 || true
                 ip address add ${target_ipaddr} dev ${vlan_interface} >&2 || true
