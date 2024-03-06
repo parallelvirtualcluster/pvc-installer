@@ -93,7 +93,7 @@ case $( uname -m ) in
     ;;
 esac
 # Supplemental packages (installed in chroot after debootstrap)
-suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp,ipmitool,acpid,acpi-support-base,lsscsi"
+suppkglist="firmware-linux,firmware-linux-nonfree,firmware-bnx2,firmware-bnx2x,ntp,ipmitool,acpid,acpi-support-base,lsscsi,lsb-release"
 
 # Modules to blacklist (known-faulty)
 target_module_blacklist=( "hpwdt" )
