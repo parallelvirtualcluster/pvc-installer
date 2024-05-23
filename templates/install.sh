@@ -836,17 +836,26 @@ sleep 5
 te=$(date +%s)
 echo "done. [$((te-ts))s]"
 
+if grep --silent '/dev/nvme' <<<"${target_disk}"; then
+    part_lvm="${target_disk}p4"
+    part_boot="${target_disk}p3"
+    part_esp="${target_disk}p2"
+else
+    part_lvm="${target_disk}4"
+    part_boot="${target_disk}3"
+    part_esp="${target_disk}2"
+fi
 
-echo -n "Creating LVM PV on '${target_disk}4'... "
+echo -n "Creating LVM PV on '${part_lvm}'... "
 ts=$(date +%s)
-yes | pvcreate -ffy ${target_disk}4 >&2
+yes | pvcreate -ffy ${part_lvm} >&2
 te=$(date +%s)
 echo "done. [$((te-ts))s]"
 
 
 echo -n "Creating LVM VG 'vgx'... "
 ts=$(date +%s)
-yes | vgcreate -f vgx ${target_disk}4 >&2
+yes | vgcreate -f vgx ${part_lvm} >&2
 te=$(date +%s)
 echo "done. [$((te-ts))s]"
 
@@ -905,14 +914,14 @@ echo "done. [$((te-ts))s]"
 
 echo -n "Creating filesystem on boot partition (ext2)... "
 ts=$(date +%s)
-yes | mkfs.ext2 ${target_disk}3 >&2
+yes | mkfs.ext2 ${part_boot} >&2
 te=$(date +%s)
 echo "done. [$((te-ts))s]"
 
 
 echo -n "Creating filesystem on ESP partition (vfat)... "
 ts=$(date +%s)
-yes | mkdosfs -F32 ${target_disk}2 >&2
+yes | mkdosfs -F32 ${part_esp} >&2
 te=$(date +%s)
 echo "done. [$((te-ts))s]"
 
@@ -925,10 +934,10 @@ mkdir -p ${target} >&2
 mount /dev/vgx/root ${target} >&2
 mkdir -p ${target}/boot >&2
 chattr +i ${target}/boot >&2
-mount ${target_disk}3 ${target}/boot >&2
+mount ${part_boot} ${target}/boot >&2
 mkdir -p ${target}/boot/efi >&2
 chattr +i ${target}/boot/efi >&2
-mount ${target_disk}2 ${target}/boot/efi >&2
+mount ${part_esp} ${target}/boot/efi >&2
 mkdir -p ${target}/var/lib/ceph >&2
 chattr +i ${target}/var/lib/ceph >&2
 mount /dev/vgx/ceph ${target}/var/lib/ceph >&2
@@ -993,8 +1002,10 @@ for disk in /dev/disk/by-path/*; do
     fi
 done
 
-# Check if TRIM is supported on the root disk
-if hdparm -I ${target_disk} | grep --silent "TRIM supported"; then
+# Check if TRIM is supported on the root disk (NVMe always is)
+if grep --silent '/dev/nvme' <<<"${target_disk}"; then
+    extdiscard="discard,"
+elif hdparm -I ${target_disk} | grep --silent "TRIM supported"; then
     extdiscard="discard,"
 else
     extdiscard=""
