@@ -1,1 +1,1 @@
-live-task-standard live-tools live-boot live-boot-initramfs-tools psmisc mdadm lvm2 parted gdisk dosfstools debootstrap sipcalc vim ca-certificates vlan tftp-hpa curl ipmitool lsscsi hdparm
+live-task-standard live-tools live-boot live-boot-initramfs-tools psmisc mdadm lvm2 parted gdisk dosfstools debootstrap sipcalc vim ca-certificates vlan tftp-hpa curl ipmitool nvme-cli jq lsscsi hdparm
