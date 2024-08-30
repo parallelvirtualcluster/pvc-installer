@@ -233,56 +233,11 @@ seed_config() {
             target_disk="$( realpath ${target_disk} )"
         ;;
         detect:*)
-            # Read the detect string into separate variables
-            # A detect string is formated thusly:
-            #   detect:<Controller-or-Model-Name>:<Capacity-in-human-units><0-indexed-ID>
-            # For example:
-            #   detect:INTEL:800GB:1
-            #   detect:DELLBOSS:240GB:0
-            #   detect:PERC H330 Mini:200GB:0
-            echo "Attempting to find disk for detect string '${o_target_disk}'"
-            IFS=: read detect b_name b_size b_id <<<"${target_disk}"
-            # Get the lsscsi output (exclude NVMe)
-            lsscsi_data_all="$( lsscsi -s -N )"
-            # Get the available sizes, and match to within +/- 3%
-            lsscsi_sizes=( $( awk '{ print $NF }' <<<"${lsscsi_data_all}" | sort | uniq ) )
-            # For each size...
-            for size in ${lsscsi_sizes[@]}; do
-                # Get whether we match +3% and -3% sizes to handle human -> real deltas
-                # The break below is pretty safe. I can think of no two classes of disks
-                # where the difference is within 3% of each other. Even the common
-                # 120GB -> 128GB and 240GB -> 256GB size deltas are well outside of 3%,
-                # so this should be safe in all cases.
-                # We use Python for this due to BASH's problematic handling of floating-
-                # point numbers.
-                is_match="$(
-                    python <<EOF
-from re import sub
-try:
-    b_size = float(sub(r'\D.','','${b_size}'))
-    t_size = float(sub(r'\D.','','${size}'))
-except ValueError:
-    exit(0)
-plusthreepct = t_size * 1.03
-minusthreepct = t_size * 0.97
-if b_size > minusthreepct and b_size < plusthreepct:
-    print("match")
-EOF
-                )"
-                # If we do, this size is our actual block size, not what was specified
-                if [[ -n ${is_match} ]]; then
-                    b_size=${size}
-                    break
-                fi
-            done
-            # Search for the b_name first
-            lsscsi_data_name="$( grep --color=none -Fiw "${b_name}" <<<"${lsscsi_data_all}" )"
-            # Search for the b_blocks second
-            lsscsi_data_name_size="$( grep --color=none -Fiw "${b_size}" <<<"${lsscsi_data_name}" )"
-            # Read the /dev/X results into an array
-            lsscsi_filtered=( $( awk '{ print $(NF-1) }' <<<"${lsscsi_data_name_size}" ) )
-            # Get the b_id-th entry
-            target_disk="${lsscsi_filtered[${b_id}]}"
+            # Use the detect.py parser to get the target disk from the detect string
+            target_disk="$( /detect.py ${target_disk} )"
+        ;;
+        *)
+            target_disk=""
         ;;
     esac
 
