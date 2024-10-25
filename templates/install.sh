@@ -72,7 +72,7 @@ target_deploy_user="XXDEPLOYUSERXX"
 supported_filesystems="ext4 xfs"
 default_filesystem="ext4"
 
-supported_debrelease="buster bullseye bookworm"
+supported_debrelease="bookworm"
 default_debrelease="bookworm"
 default_debmirror="http://ftp.debian.org/debian"
 
